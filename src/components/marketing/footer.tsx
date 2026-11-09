@@ -30,9 +30,14 @@ export async function MarketingFooter() {
             <p className="max-w-sm font-display text-ld-headline-lg-mobile italic text-ld-on-surface-variant">
               Your little world, made for two.
             </p>
-            <a href={`mailto:${SITE.supportEmail}`} className="text-ld-body-sm text-ld-on-surface-variant transition-colors duration-200 hover:text-ld-primary">
-              {SITE.supportEmail}
-            </a>
+            <div className="flex flex-col gap-1">
+              <a href={`mailto:${SITE.supportEmail}`} className="text-ld-body-sm text-ld-on-surface-variant transition-colors duration-200 hover:text-ld-primary">
+                {SITE.supportEmail}
+              </a>
+              <a href={`tel:${SITE.supportPhone}`} className="text-ld-body-sm text-ld-on-surface-variant transition-colors duration-200 hover:text-ld-primary">
+                {SITE.supportPhone}
+              </a>
+            </div>
           </div>
           <FooterColumn title="Product" links={PRODUCT} />
           <FooterColumn title="Company" links={COMPANY} />

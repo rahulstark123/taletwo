@@ -14,7 +14,7 @@ const SECTIONS: LegalSection[] = [
     heading: "1. Who we are",
     body: [
       "TaleTwo is a private app for two people to share memories, plans, notes and small daily moments. This policy explains what personal information we handle when you use TaleTwo, and why.",
-      "TaleTwo is operated by [Legal entity name], [registered address]. Questions about this policy go to " + SITE.supportEmail + ".",
+      "TaleTwo is operated by [Legal entity name], [registered address]. Questions about this policy go to " + SITE.supportEmail + " or call " + SITE.supportPhone + ".",
     ],
   },
   {
@@ -87,7 +87,7 @@ const SECTIONS: LegalSection[] = [
     heading: "9. Your rights",
     body: [
       "You can ask us to tell you what personal information we hold about you, to correct it, to delete it, to give you a copy in a usable format, or to stop using it for a particular purpose. You can also withdraw consent you have given.",
-      "Most of this you can do yourself in the app: edit your profile, change your password, change your space name or code, delete content and manage your photos. For anything else, write to " + SITE.supportEmail + ". We will respond within a reasonable time, and within the time the law requires.",
+      "Most of this you can do yourself in the app: edit your profile, change your password, change your space name or code, delete content and manage your photos. For anything else, write to " + SITE.supportEmail + " or call " + SITE.supportPhone + ". We will respond within a reasonable time, and within the time the law requires.",
       "If you are not satisfied with our answer, you can raise a complaint with the data protection authority in your country.",
     ],
   },

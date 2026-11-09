@@ -21,6 +21,8 @@ export const SITE = {
   ],
   /** Official contact address. Used in the footer, legal pages, support and structured data. */
   supportEmail: "taletwo@zohomail.in",
+  /** Phone number for people who want to connect directly. International format. */
+  supportPhone: "+919110062950",
 } as const;
 
 /** Production address used for canonical links, sitemap and social previews when no env value is set. */

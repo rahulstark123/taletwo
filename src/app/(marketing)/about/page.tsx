@@ -38,7 +38,12 @@ export default function AboutPage() {
       <section aria-labelledby="founder-note" className="space-y-5 border-l-2 border-brand-accent pl-6">
         <h2 id="founder-note" className="font-display text-2xl text-foreground">A note from the founder</h2>
         <div className="space-y-4 text-base leading-relaxed text-muted-foreground">
-          <p>Hi, I&apos;m Rahul.</p>
+          <p>Hi, I&apos;m Rahul Raj, from Muzaffarpur, Bihar, India.</p>
+          <p>
+            If you have any doubts or ideas on how TaleTwo could get better, please reach out to me at{" "}
+            <a href={`mailto:${SITE.supportEmail}`} className="text-brand-primary underline underline-offset-4">{SITE.supportEmail}</a>
+            {" "}or call <a href={`tel:${SITE.supportPhone}`} className="text-brand-primary underline underline-offset-4">{SITE.supportPhone}</a>. I read every message myself.
+          </p>
           <p>
             I built TaleTwo because I know how much small things matter in a relationship: a message that arrives at the
             right moment, a photo from a trip we almost forgot, a plan we both promised to keep. I wanted one calm place

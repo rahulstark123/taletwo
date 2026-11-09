@@ -19,6 +19,9 @@ export function WriteUsSection() {
           <Mail className="size-5" aria-hidden="true" />
           {SITE.supportEmail}
         </a>
+        <a href={`tel:${SITE.supportPhone}`} className="text-ld-body-sm text-ld-on-surface-variant transition-colors hover:text-ld-primary">
+          Or call {SITE.supportPhone}
+        </a>
         <p className="text-ld-caption text-ld-on-surface-variant">Feedback, suggestions, questions and bug reports all go to the same inbox.</p>
       </div>
     </LandingSection>

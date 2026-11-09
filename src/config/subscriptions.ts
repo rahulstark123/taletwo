@@ -1,14 +1,13 @@
 /**
- * In-app subscription plans: Free, Pro and Max. Client-safe data only.
+ * Subscription plans: Free, Pro and Max. Client-safe data only. The public pricing page and the in-app
+ * Subscriptions page both read this file, so they always show the same prices and features.
  *
  * Prices are in minor units (paise for INR, cents for USD) so billing never handles floats. India pays in
- * rupees; everywhere else pays in US dollars. These plans are shown for
- * planning. Payments and limit enforcement come with the billing milestone, so nothing here is
- * charged or blocked yet.
- *
- * Note: the public pricing pages still read src/config/pricing.ts (one "Premium" plan). Keep the two
- * in step when public pricing changes.
+ * rupees; everywhere else pays in US dollars. Payments run through Razorpay, and limits are enforced on
+ * the server (see config/plan-limits.ts).
  */
+
+import { PLAN_AI_CREDITS_PER_MONTH, SIGNUP_AI_CREDITS } from "@/config/ai-credits";
 
 export type PlanId = "free" | "pro" | "max";
 
@@ -132,11 +131,10 @@ export const PLAN_FEATURES: FeatureGroup[] = [
   {
     title: "Astro AI (preview)",
     rows: [
-      { label: "AI credits each month", free: "20 once, at signup", pro: "100", max: "250" },
+      { label: "AI credits", free: `${SIGNUP_AI_CREDITS} once, at signup`, pro: `${PLAN_AI_CREDITS_PER_MONTH.pro} a month`, max: `${PLAN_AI_CREDITS_PER_MONTH.max} a month` },
       { label: "Numerology", free: true, pro: true, max: true },
-      { label: "Chat questions", free: "3 a day", pro: "30 a day", max: "Unlimited (fair use)" },
+      { label: "Chat sessions", free: "3 a day", pro: "30 a day", max: "Unlimited (fair use)" },
       { label: "Partnership and finance topics", free: false, pro: true, max: true },
-      { label: "Detailed partnership report", free: false, pro: false, max: true },
     ],
   },
   {

@@ -6,10 +6,12 @@ import {
   BookHeart,
   CalendarDays,
   Camera,
+  Gamepad2,
   Gem,
   ListChecks,
   Mail,
   MessageCircleHeart,
+  Moon,
   NotebookPen,
   Sparkles,
   type LucideIcon,
@@ -21,7 +23,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Couples app features: memories, love letters, plans and games",
   description:
-    "Shared memories, notes, love letters, plans, bucket lists, special days, daily questions and a shared calendar, all in one private space for two.",
+    "Shared memories, notes, love letters, plans, bucket lists, special days, daily questions, a shared calendar, couple games and Astro AI, all in one private space for two.",
   alternates: { canonical: "/features" },
   openGraph: { title: "TaleTwo features", url: "/features" },
 };
@@ -59,7 +61,7 @@ const FEATURES: Feature[] = [
     icon: NotebookPen,
     title: "Our Notes",
     body: "Shared notes for ideas, reminders and everyday thoughts. Pin the ones that matter and see who wrote and updated each one.",
-    bullets: ["Rich text formatting", "Pin and search", "Created by, last updated"],
+    bullets: ["Pin and search", "Created by, last updated"],
     preview: (
       <div className="space-y-3">
         <Tile>
@@ -77,8 +79,8 @@ const FEATURES: Feature[] = [
     id: "letters",
     icon: Mail,
     title: "Love Letters",
-    body: "Write a letter and send it now, save it as a draft, or schedule it for later. Letters can be sealed for a moment such as “Open when you miss me”.",
-    bullets: ["Drafts stay private to you", "Scheduled release times", "Read and unread status", "Letter templates"],
+    body: "Write a letter and send it now, or keep it as a draft. Pro and Max can also seal a letter until a day you choose, such as “Open when you miss me”.",
+    bullets: ["Drafts stay private to you", "Scheduled “Open when” letters on Pro and Max", "Read and unread status", "Letter templates and paper styles"],
     preview: (
       <Tile className="border-brand-accent/50">
         <p className="text-eyebrow">Open when you need a smile</p>
@@ -125,7 +127,7 @@ const FEATURES: Feature[] = [
     id: "special-days",
     icon: Gem,
     title: "Special Days",
-    body: "Anniversaries, birthdays, first meetings and custom dates, each with a countdown, an annual repeat and reminder preferences.",
+    body: "Anniversaries, birthdays, first meetings and custom dates, each with a countdown and an option to repeat every year.",
     bullets: ["Countdown to the next date", "Repeats every year", "Time-zone aware"],
     preview: (
       <Tile className="flex items-center justify-between">
@@ -156,7 +158,7 @@ const FEATURES: Feature[] = [
     icon: CalendarDays,
     title: "Shared Calendar",
     body: "A monthly calendar with special days, plans and date nights in consistent colours. Add, edit and remind yourselves of what is coming.",
-    bullets: ["Monthly and weekly views", "Event descriptions", "Reminder preferences"],
+    bullets: ["Monthly and weekly views", "Event descriptions", "Shared colours for each kind of event"],
     preview: (
       <Tile>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
@@ -174,6 +176,34 @@ const FEATURES: Feature[] = [
             </span>
           ))}
         </div>
+      </Tile>
+    ),
+  },
+  {
+    id: "games",
+    icon: Gamepad2,
+    title: "Couple Games",
+    body: "Playful games for two, from Indian and Western traditions, to spark conversation on a slow evening or a long-distance call.",
+    bullets: ["21 couple games in total", "Free includes two games to start", "Pro and Max unlock every game", "Games for every mood"],
+    preview: (
+      <Tile>
+        <p className="text-eyebrow">Truth or dare</p>
+        <p className="mt-2 font-display text-lg leading-snug text-foreground">What is a dream you have never told anyone?</p>
+        <p className="mt-3 text-xs text-muted-foreground">Take turns, and keep the answers just between you two.</p>
+      </Tile>
+    ),
+  },
+  {
+    id: "astro-ai",
+    icon: Moon,
+    title: "Astro AI (preview)",
+    body: "Reflective guidance from Indian (Vedic) astrology and Western numerology, for love, money, career and everyday decisions. Each reading uses AI credits, and the cost is shown before you ask.",
+    bullets: ["Chat with Astro AI", "Numerology and partnership notes", "Daily note for the two of you", "Festival and auspicious-day guidance"],
+    preview: (
+      <Tile>
+        <p className="text-eyebrow">Daily note</p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">A calm, positive note for each of you, with one small thing you could do together today.</p>
+        <p className="mt-3 text-xs text-muted-foreground">Reflection and fun. Not a substitute for professional advice.</p>
       </Tile>
     ),
   },

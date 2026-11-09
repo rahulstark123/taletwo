@@ -1,14 +1,3 @@
-import type { PriceConfig } from "@/config/pricing";
-
-/** Formats a minor-unit amount (e.g. paise) for display. */
-export function formatPrice(price: PriceConfig, locale = "en-IN"): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: price.currency,
-    maximumFractionDigits: 0,
-  }).format(price.amountMinor / 100);
-}
-
 /** "1 memory" / "3 memories". */
 export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : pluralForm}`;

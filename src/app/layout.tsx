@@ -65,6 +65,7 @@ const siteJsonLd = [
     logo: `${APP_URL}/icons/favicon.svg`,
     description: SITE.description,
     email: SITE.supportEmail,
+    telephone: SITE.supportPhone,
   },
   {
     "@context": "https://schema.org",

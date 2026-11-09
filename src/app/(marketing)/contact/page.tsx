@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Mail } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { SITE } from "@/config/site";
 
@@ -30,9 +30,18 @@ export default function ContactPage() {
           <span className="block text-sm text-muted-foreground">{SITE.supportEmail}</span>
         </span>
       </a>
-      <p className="text-xs text-muted-foreground">
-        The address above is a placeholder until the production mailbox is configured.
-      </p>
+      <a
+        href={`tel:${SITE.supportPhone}`}
+        className="surface-card flex items-center gap-4 p-6 transition-shadow hover:shadow-card"
+      >
+        <span className="flex size-11 items-center justify-center rounded-full bg-brand-accent/25 text-brand-primary">
+          <Phone className="size-5" aria-hidden="true" />
+        </span>
+        <span className="space-y-1">
+          <span className="block text-card-title text-foreground">Call or message</span>
+          <span className="block text-sm text-muted-foreground">{SITE.supportPhone}</span>
+        </span>
+      </a>
     </div>
   );
 }

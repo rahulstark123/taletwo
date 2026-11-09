@@ -54,7 +54,7 @@ const SECTIONS: LegalSection[] = [
       "TaleTwo has a Free plan, and paid Pro and Max plans. Prices, limits and the features in each plan are shown in the app before you pay.",
       "Pro and Max are one-time payments for one month or one year. They do not renew automatically, so there is no recurring charge to cancel. When a paid period ends, your space returns to the Free plan, and your content stays in place. Buying again while a period is running adds time to the end of it.",
       "One payment covers the whole couple space. Payments are processed by Razorpay, and taxes, if any, are shown at checkout.",
-      "Questions about a payment can be sent to " + SITE.supportEmail + ".",
+      "Questions about a payment can be sent to " + SITE.supportEmail + " or call " + SITE.supportPhone + ".",
       "We may change prices for future periods. We will tell you before a change applies to a plan you already bought.",
     ],
   },
@@ -112,7 +112,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "14. Contact and changes to these terms",
     body: [
-      "Write to " + SITE.supportEmail + " with any question about these terms. We may update them from time to time. For important changes we will tell you in the app or by email before they take effect. Continuing to use TaleTwo after that means you accept the updated terms.",
+      "Write to " + SITE.supportEmail + " or call " + SITE.supportPhone + " with any question about these terms. We may update them from time to time. For important changes we will tell you in the app or by email before they take effect. Continuing to use TaleTwo after that means you accept the updated terms.",
     ],
   },
 ];

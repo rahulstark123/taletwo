@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/shared/page-header";
 
 export const metadata: Metadata = {
   title: "Pricing: free couples app with Pro and Max plans",
-  description: "Start with TaleTwo for free. Premium is one subscription that covers both connected partners.",
+  description:
+    "TaleTwo is free to start. Pro and Max unlock more room, unlimited notes and letters, every couple game and more. One subscription covers both partners.",
   alternates: { canonical: "/pricing" },
   openGraph: { title: "TaleTwo pricing", url: "/pricing" },
 };
@@ -15,12 +16,12 @@ export default function PricingPage() {
       <PageHeader
         eyebrow="Pricing"
         title="Simple plans for your shared space."
-        description="Start free and upgrade whenever you want more room. Premium is one subscription per couple, so both partners get the full experience."
+        description="Start free and upgrade whenever you want more room. One subscription covers both partners in your space."
       />
       <PricingTable />
       <p className="mx-auto max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-        Prices shown are launch prices in Indian rupees and may change. Taxes and payment-method fees may apply.
-        Billing is not yet active in this preview.
+        Prices are shown in Indian rupees for India and US dollars elsewhere. Taxes, if any, are shown at checkout.
+        Payments are processed by Razorpay.
       </p>
     </div>
   );
