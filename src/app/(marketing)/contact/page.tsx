@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SITE } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: "Contact TaleTwo support",
   description: "Get in touch with the TaleTwo team.",
   alternates: { canonical: "/contact" },
   openGraph: { title: "Contact TaleTwo", url: "/contact" },

@@ -3,7 +3,7 @@ import { PricingTable } from "@/components/marketing/pricing-table";
 import { PageHeader } from "@/components/shared/page-header";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Pricing: free couples app with Pro and Max plans",
   description: "Start with TaleTwo for free. Premium is one subscription that covers both connected partners.",
   alternates: { canonical: "/pricing" },
   openGraph: { title: "TaleTwo pricing", url: "/pricing" },

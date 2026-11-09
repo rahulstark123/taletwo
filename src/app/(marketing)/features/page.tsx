@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Features",
+  title: "Couples app features: memories, love letters, plans and games",
   description:
     "Shared memories, notes, love letters, plans, bucket lists, special days, daily questions and a shared calendar, all in one private space for two.",
   alternates: { canonical: "/features" },

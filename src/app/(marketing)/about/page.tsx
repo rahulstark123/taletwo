@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SITE } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About TaleTwo: a private app for couples",
   description: "Why TaleTwo exists: a calm, private place for two people to keep their memories and plan their future.",
   alternates: { canonical: "/about" },
   openGraph: { title: "About TaleTwo", url: "/about" },

@@ -14,15 +14,17 @@ export function LegalPage({
 }: {
   title: string;
   updated: string;
-  notice: string;
+  notice?: string;
   sections: LegalSection[];
 }) {
   return (
     <div className="mx-auto max-w-3xl space-y-10 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
       <PageHeader eyebrow="Legal" title={title} description={updated} />
-      <p role="note" className="rounded-md border border-brand-accent/60 bg-brand-accent/15 px-4 py-3 text-sm text-foreground">
-        {notice}
-      </p>
+      {notice && (
+        <p role="note" className="rounded-md border border-brand-accent/60 bg-brand-accent/15 px-4 py-3 text-sm text-foreground">
+          {notice}
+        </p>
+      )}
       <div className="space-y-8">
         {sections.map((section) => (
           <section key={section.heading} aria-labelledby={`legal-${slug(section.heading)}`} className="space-y-3">

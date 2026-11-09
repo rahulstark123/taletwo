@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cacheLife } from "next/cache";
 import { Wordmark } from "@/components/brand/logo";
+import { SITE } from "@/config/site";
 
 const PRODUCT = [
   { label: "Features", href: "/features" },
@@ -29,6 +30,9 @@ export async function MarketingFooter() {
             <p className="max-w-sm font-display text-ld-headline-lg-mobile italic text-ld-on-surface-variant">
               Your little world, made for two.
             </p>
+            <a href={`mailto:${SITE.supportEmail}`} className="text-ld-body-sm text-ld-on-surface-variant transition-colors duration-200 hover:text-ld-primary">
+              {SITE.supportEmail}
+            </a>
           </div>
           <FooterColumn title="Product" links={PRODUCT} />
           <FooterColumn title="Company" links={COMPANY} />

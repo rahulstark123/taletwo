@@ -4,13 +4,31 @@ export const SITE = {
   tagline: "Your little world, made for two.",
   brandMessage: "Every little moment deserves a place.",
   description:
-    "A private space to save your memories, share your dreams, plan your future and celebrate every little moment together.",
+    "TaleTwo is a private app for couples to save shared memories, write love letters, keep bucket lists and special days, plan together and play couple games. Free to start.",
   locale: "en_US",
-  /** Placeholder until the production domain and mailbox exist. */
-  supportEmail: "hello@taletwo.example",
+  /** Search terms this site should be found for. Used in page metadata, not as a keyword stuffing list. */
+  keywords: [
+    "couples app",
+    "private app for couples",
+    "relationship app",
+    "couple memories app",
+    "love letters app",
+    "shared bucket list for couples",
+    "couple daily questions",
+    "shared calendar for couples",
+    "couple games online",
+    "Astro AI for couples",
+  ],
+  /** Official contact address. Used in the footer, legal pages, support and structured data. */
+  supportEmail: "taletwo@zohomail.in",
 } as const;
 
-/** Public base URL from NEXT_PUBLIC_APP_URL; falls back to localhost for development. */
+/** Production address used for canonical links, sitemap and social previews when no env value is set. */
+const PRODUCTION_URL = "https://www.gettaletwo.fun";
+
+/** Public base URL from NEXT_PUBLIC_APP_URL; falls back to production on Vercel and localhost in development. */
 export function getAppUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const base = fromEnv || (process.env.NODE_ENV === "production" ? PRODUCTION_URL : "http://localhost:3000");
+  return base.replace(/\/$/, "");
 }

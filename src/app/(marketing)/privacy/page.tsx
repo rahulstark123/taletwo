@@ -3,7 +3,7 @@ import { LegalPage, type LegalSection } from "@/components/marketing/legal-page"
 import { SITE } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
+  title: "Privacy Policy: how TaleTwo protects couple data",
   description: "What TaleTwo collects, why, where it is stored, who we share it with, and the rights you have over your information.",
   alternates: { canonical: "/privacy" },
   openGraph: { title: "TaleTwo Privacy Policy", url: "/privacy" },
@@ -111,7 +111,6 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       updated="Last updated 9 November 2026"
       sections={SECTIONS}
-      notice="This policy is a complete draft for TaleTwo. Before launch, a qualified lawyer should check it against the laws that apply to you, including India's Digital Personal Data Protection Act, 2023. Fill in the bracketed details first."
     />
   );
 }

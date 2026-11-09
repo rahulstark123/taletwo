@@ -6,7 +6,7 @@ import { HowItWorksSteps } from "@/components/marketing/how-it-works-steps";
 import { PageHeader } from "@/components/shared/page-header";
 
 export const metadata: Metadata = {
-  title: "How It Works",
+  title: "How TaleTwo works: a private app for couples in 3 steps",
   description: "Create your private space, invite your partner and start building your story together in three simple steps.",
   alternates: { canonical: "/how-it-works" },
   openGraph: { title: "How TaleTwo works", url: "/how-it-works" },

@@ -3,7 +3,7 @@ import { LegalPage, type LegalSection } from "@/components/marketing/legal-page"
 import { SITE } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
+  title: "Terms of Service for TaleTwo",
   description: "The rules for using TaleTwo: your account, your couple space, subscriptions, AI credits and what we and you can expect from each other.",
   alternates: { canonical: "/terms" },
   openGraph: { title: "TaleTwo Terms of Service", url: "/terms" },
@@ -52,9 +52,9 @@ const SECTIONS: LegalSection[] = [
     heading: "6. Plans and payments",
     body: [
       "TaleTwo has a Free plan, and paid Pro and Max plans. Prices, limits and the features in each plan are shown in the app before you pay.",
-      "Pro and Max are one-time payments for one month or one year. They do not renew automatically. When a paid period ends, your space returns to the Free plan, and your content stays in place. Buying again while a period is running adds time to the end of it.",
+      "Pro and Max are one-time payments for one month or one year. They do not renew automatically, so there is no recurring charge to cancel. When a paid period ends, your space returns to the Free plan, and your content stays in place. Buying again while a period is running adds time to the end of it.",
       "One payment covers the whole couple space. Payments are processed by Razorpay, and taxes, if any, are shown at checkout.",
-      "Refunds: if you have not used the paid features in the period and ask within 7 days of paying, we will refund the payment. In other cases, refunds are at our discretion or as the law requires. Contact " + SITE.supportEmail + " to ask.",
+      "Questions about a payment can be sent to " + SITE.supportEmail + ".",
       "We may change prices for future periods. We will tell you before a change applies to a plan you already bought.",
     ],
   },
@@ -62,7 +62,7 @@ const SECTIONS: LegalSection[] = [
     heading: "7. AI credits and Astro AI",
     body: [
       "Astro AI uses AI credits. Every new account starts with a set number of credits, and paid plans add credits each month, as shown in the app. Each use of an Astro AI feature costs the credits shown before you use it.",
-      "AI credits have no cash value. They cannot be sold, transferred or exchanged. Credits are not refundable except where the law requires, but unused credits stay on your account while it is active.",
+      "AI credits have no cash value. They cannot be sold, transferred or exchanged. Unused credits stay on your account while it is active.",
       "Astro AI is offered for reflection and entertainment. Its astrology, numerology and other replies may be wrong, incomplete or out of date. They are not medical, legal, financial, safety or professional advice. Do not rely on them for important decisions, and speak to a qualified professional when you need one.",
     ],
   },
@@ -82,7 +82,7 @@ const SECTIONS: LegalSection[] = [
     heading: "10. Ending your account",
     body: [
       "You can stop using TaleTwo at any time. To delete your account and your personal information, use the request option in Support. Deleting an account removes your content from your partner's view too, and we explain in our Privacy Policy how long records are kept.",
-      "We may suspend or end an account that breaks these terms. If we end an account for a reason that is not serious misconduct, we will refund any unused part of a paid period, where that is fair.",
+      "We may suspend or end an account that breaks these terms.",
     ],
   },
   {
@@ -123,7 +123,6 @@ export default function TermsPage() {
       title="Terms of Service"
       updated="Last updated 9 November 2026"
       sections={SECTIONS}
-      notice="This is a complete draft for TaleTwo. Before launch, a qualified lawyer should review it. Fill in the bracketed details, and confirm the refund window and the governing law, which are business decisions."
     />
   );
 }
