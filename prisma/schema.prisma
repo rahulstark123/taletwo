@@ -1,0 +1,586 @@
+// TaleTwo database schema.
+// Milestones 2 and 3 scope: users, onboarding, workspaces (couple spaces), memberships,
+// invitations, preferences and audit events. Other modules are added in their milestones.
+
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceMemberStatus {
+  ACTIVE
+  LEFT
+
+  @@map("workspace_member_status")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+
+  @@map("invitation_status")
+}
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+
+  @@map("theme_preference")
+}
+
+/// One row per Supabase Auth user. The primary key is the Supabase user id (UUID).
+model UserProfile {
+  id                    String    @id @db.Uuid
+  email                 String    @unique @db.VarChar(254)
+  displayName           String    @db.VarChar(60)
+  avatarPath            String?   @db.VarChar(512)
+  spaceCode             String?   @unique @db.VarChar(6)
+  relationshipStartDate DateTime? @db.Date
+  timezone              String    @default("UTC") @db.VarChar(64)
+  country               String?   @db.Char(2)
+  currency              String?   @db.VarChar(3)
+  emailVerifiedAt       DateTime? @db.Timestamptz(3)
+  onboardingCompletedAt DateTime? @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  preference      UserPreference?
+  memberships     WorkspaceMember[]
+  createdInvites  Invitation[]      @relation("InvitationCreator")
+  acceptedInvites Invitation[]      @relation("InvitationAcceptor")
+  auditEvents     AuditEvent[]
+  dailyAnswers    DailyAnswer[]   @relation("DailyAnswerAuthor")
+  notes           Note[]          @relation("NoteAuthor")
+  plans           Plan[]          @relation("PlanCreator")
+  bucketItems     BucketItem[]    @relation("BucketCreator")
+  memories        Memory[]        @relation("MemoryCreator")
+  specialDays     SpecialDay[]    @relation("SpecialDayCreator")
+  calendarEvents  CalendarEvent[]  @relation("CalendarEventCreator")
+  supportRequests SupportRequest[] @relation("SupportRequestAuthor")
+  payments        Payment[]        @relation("PaymentPayer")
+  aiWallet        AiCreditWallet?
+  aiCreditEntries AiCreditEntry[]
+
+  @@map("user_profiles")
+}
+
+model UserPreference {
+  userId             String          @id @db.Uuid
+  theme              ThemePreference @default(SYSTEM)
+  emailNotifications Boolean         @default(true)
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @db.Timestamptz(3)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+/// A workspace is a private couple space. Its id is a sequential integer: 1, 2, 3, ...
+/// Each new workspace gets the next number, so the first workspace is 1 and the next is 2.
+model Workspace {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(80)
+  // Used to decide when the daily question changes and when "midnight" reveals happen.
+  timezone      String     @default("UTC") @db.VarChar(64)
+  /// ISO 3166 country code and ISO 4217 currency code. Budgets and money shown in the space use the currency.
+  country       String     @default("IN") @db.Char(2)
+  currency      String     @default("INR") @db.VarChar(3)
+  questionReveal QuestionRevealMode @default(WHEN_BOTH_ANSWER)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  dailyAnswers DailyAnswer[]
+  members     WorkspaceMember[]
+  invitations Invitation[]
+  notes       Note[]
+  plans       Plan[]
+  bucketItems BucketItem[]
+  memories    Memory[]
+  specialDays SpecialDay[]
+  calendarEvents CalendarEvent[]
+  subscription   Subscription?
+  payments       Payment[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String                @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  userId      String                @db.Uuid
+  status      WorkspaceMemberStatus @default(ACTIVE)
+  joinedAt    DateTime              @default(now()) @db.Timestamptz(3)
+  leftAt      DateTime?             @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId, status])
+  @@index([workspaceId, status])
+  @@map("workspace_members")
+}
+
+/// Invitations store only a SHA-256 hash of the invite code, never the code itself.
+model Invitation {
+  id               String           @id @default(uuid()) @db.Uuid
+  workspaceId      Int
+  createdByUserId  String           @db.Uuid
+  codeHash         String           @unique @db.VarChar(64)
+  status           InvitationStatus @default(PENDING)
+  expiresAt        DateTime         @db.Timestamptz(3)
+  acceptedAt       DateTime?        @db.Timestamptz(3)
+  acceptedByUserId String?          @db.Uuid
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator    UserProfile  @relation("InvitationCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  acceptedBy UserProfile? @relation("InvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+/// Security-relevant events. Metadata must never contain passwords, codes, tokens or raw emails.
+model AuditEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  action    String   @db.VarChar(64)
+  metadata  Json?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_events")
+}
+
+enum NoteColor {
+  ROSE
+  SAND
+  SAGE
+  LAVENDER
+  CREAM
+
+  @@map("note_color")
+}
+
+/// Shared notes inside a workspace. Soft-deleted rows keep deletedAt so an action can be undone.
+model Note {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  authorId    String    @db.Uuid
+  title       String    @db.VarChar(120)
+  body        String    @db.Text
+  color       NoteColor @default(ROSE)
+  pinned      Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    UserProfile @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, pinned, updatedAt])
+  @@index([authorId])
+  @@map("notes")
+}
+
+enum PlanKind {
+  DATE_NIGHT
+  TRIP
+  WEEKEND
+  EXPERIENCE
+  FAMILY_GATHERING
+  OTHER
+
+  @@map("plan_kind")
+}
+
+enum PlanAudience {
+  COUPLE
+  FAMILY
+
+  @@map("plan_audience")
+}
+
+enum PlanStatus {
+  IDEA
+  PLANNED
+  DONE
+
+  @@map("plan_status")
+}
+
+/// A shared plan: a date night, trip, weekend, experience or family gathering.
+/// Checklist items are stored as JSON and validated on write (max 30 items).
+model Plan {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  createdById String       @db.Uuid
+  title       String       @db.VarChar(120)
+  description String       @default("") @db.Text
+  kind        PlanKind     @default(DATE_NIGHT)
+  audience    PlanAudience @default(COUPLE)
+  status      PlanStatus   @default(PLANNED)
+  startsAt    DateTime?    @db.Timestamptz(3)
+  location    String       @default("") @db.VarChar(120)
+  budgetMinor Int?
+  checklist   Json         @default("[]")
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?    @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy UserProfile @relation("PlanCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, status, startsAt])
+  @@index([workspaceId, kind])
+  @@map("plans")
+}
+
+enum BucketCategory {
+  TRAVEL
+  FOOD
+  ADVENTURES
+  EXPERIENCES
+  LIFE_GOALS
+  FUN_ACTIVITIES
+
+  @@map("bucket_category")
+}
+
+enum BucketPriority {
+  SOMEDAY
+  SOON
+  MUST
+
+  @@map("bucket_priority")
+}
+
+/// A shared dream. Completing it records when and how it went.
+model BucketItem {
+  id               String         @id @default(uuid()) @db.Uuid
+  workspaceId      Int
+  createdById      String         @db.Uuid
+  title            String         @db.VarChar(120)
+  description      String         @default("") @db.Text
+  category         BucketCategory @default(EXPERIENCES)
+  priority         BucketPriority @default(SOMEDAY)
+  targetDate       DateTime?      @db.Date
+  completedAt      DateTime?      @db.Timestamptz(3)
+  completionMemory String         @default("") @db.Text
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?      @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy UserProfile @relation("BucketCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, completedAt])
+  @@index([workspaceId, category])
+  @@map("bucket_items")
+}
+
+enum MemoryCategory {
+  MILESTONE
+  TRAVEL
+  FOOD
+  EVERYDAY
+  CELEBRATION
+  FAMILY
+  OTHER
+
+  @@map("memory_category")
+}
+
+/// A photo memory: a moment with a title, a story, a date, a place and tags.
+model Memory {
+  id          String         @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  createdById String         @db.Uuid
+  title       String         @db.VarChar(120)
+  caption     String         @default("") @db.Text
+  memoryDate  DateTime       @db.Date
+  location    String         @default("") @db.VarChar(120)
+  category    MemoryCategory @default(EVERYDAY)
+  tags        String[]       @default([])
+  favourite   Boolean        @default(false)
+  createdAt   DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?      @db.Timestamptz(3)
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy UserProfile   @relation("MemoryCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  media     MemoryMedia[]
+
+  @@index([workspaceId, deletedAt, memoryDate])
+  @@index([workspaceId, category])
+  @@map("memories")
+}
+
+/// One photo inside a memory. The file lives in private Supabase Storage; only its path is stored here.
+model MemoryMedia {
+  id          String   @id @default(uuid()) @db.Uuid
+  memoryId    String   @db.Uuid
+  storagePath String   @unique @db.VarChar(512)
+  mimeType    String   @db.VarChar(64)
+  sizeBytes   Int
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+
+  @@index([memoryId, sortOrder])
+  @@map("memory_media")
+}
+
+enum SpecialDayKind {
+  RELATIONSHIP_ANNIVERSARY
+  WEDDING_ANNIVERSARY
+  BIRTHDAY
+  FIRST_MEETING
+  FIRST_DATE
+  CUSTOM
+
+  @@map("special_day_kind")
+}
+
+enum ReminderPreference {
+  NONE
+  ON_DAY
+  DAY_BEFORE
+  WEEK_BEFORE
+
+  @@map("reminder_preference")
+}
+
+/// A date worth remembering: anniversaries, birthdays, first meetings, custom days.
+/// eventDate is the original date. Repeating days are counted to their next occurrence.
+model SpecialDay {
+  id          String             @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  createdById String             @db.Uuid
+  title       String             @db.VarChar(120)
+  kind        SpecialDayKind     @default(CUSTOM)
+  eventDate   DateTime           @db.Date
+  repeatsYearly Boolean          @default(true)
+  reminder    ReminderPreference @default(WEEK_BEFORE)
+  notes       String             @default("") @db.Text
+  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?          @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy UserProfile @relation("SpecialDayCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, eventDate])
+  @@map("special_days")
+}
+
+enum QuestionRevealMode {
+  WHEN_BOTH_ANSWER
+  AT_MIDNIGHT
+
+  @@map("question_reveal_mode")
+}
+
+/// One answer to the daily question. Each partner answers independently.
+/// questionIndex points into the question bank (src/lib/daily-questions.ts).
+model DailyAnswer {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   Int
+  userId        String    @db.Uuid
+  day           DateTime  @db.Date
+  questionIndex Int
+  body          String    @db.VarChar(1000)
+  heartedAt     DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation("DailyAnswerAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId, day])
+  @@index([workspaceId, day])
+  @@map("daily_answers")
+}
+
+enum CalendarEventKind {
+  DATE_NIGHT
+  FAMILY
+  REMINDER
+  OTHER
+
+  @@map("calendar_event_kind")
+}
+
+/// A custom calendar entry (a date night, a family call, a reminder). Plans, special days and bucket
+/// dates appear on the calendar from their own tables; they are not copied here.
+model CalendarEvent {
+  id          String            @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  createdById String            @db.Uuid
+  title       String            @db.VarChar(120)
+  description String            @default("") @db.Text
+  kind        CalendarEventKind @default(OTHER)
+  startsAt    DateTime          @db.Timestamptz(3)
+  endsAt      DateTime?         @db.Timestamptz(3)
+  allDay      Boolean           @default(false)
+  location    String            @default("") @db.VarChar(120)
+  reminder    ReminderPreference @default(NONE)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?         @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy UserProfile @relation("CalendarEventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, startsAt])
+  @@map("calendar_events")
+}
+
+enum SupportRequestType {
+  TICKET
+  SUGGESTION
+
+  @@map("support_request_type")
+}
+
+enum SupportCategory {
+  BUG
+  ACCOUNT
+  PRIVACY
+  FEATURE
+  DESIGN
+  OTHER
+
+  @@map("support_category")
+}
+
+enum SupportPriority {
+  LOW
+  NORMAL
+  HIGH
+
+  @@map("support_priority")
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+
+  @@map("support_status")
+}
+
+/// A support ticket or an improvement suggestion from one user. Not tied to a workspace, so it stays
+/// with the person even if their couple space changes.
+model SupportRequest {
+  id        String          @id @default(uuid()) @db.Uuid
+  userId    String          @db.Uuid
+  type      SupportRequestType
+  category  SupportCategory
+  priority  SupportPriority @default(NORMAL)
+  status    SupportStatus   @default(OPEN)
+  subject   String          @db.VarChar(120)
+  message   String          @db.Text
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+
+  user UserProfile @relation("SupportRequestAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("support_requests")
+}
+
+enum BillingCycle {
+  MONTH
+  YEAR
+
+  @@map("billing_cycle")
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+
+  @@map("payment_status")
+}
+
+/// The paid plan for one couple space. Free is the default when no row is active.
+model Subscription {
+  workspaceId        Int          @id
+  plan               String       @db.VarChar(16)
+  cycle              BillingCycle
+  currentPeriodStart DateTime     @db.Timestamptz(3)
+  currentPeriodEnd   DateTime     @db.Timestamptz(3)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(3)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+/// One Razorpay order and what it bought. Amounts are stored in paise and set by the server.
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  workspaceId       Int
+  userId            String        @db.Uuid
+  plan              String        @db.VarChar(16)
+  cycle             BillingCycle
+  amountMinor       Int
+  currency          String        @default("INR") @db.VarChar(3)
+  status            PaymentStatus @default(CREATED)
+  razorpayOrderId   String        @unique @db.VarChar(64)
+  razorpayPaymentId String?       @unique @db.VarChar(64)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  paidAt            DateTime?     @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation("PaymentPayer", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("payments")
+}
+
+/// Current AI credit balance for one person. Never goes below zero (enforced by a database check).
+model AiCreditWallet {
+  userId    String   @id @db.Uuid
+  balance   Int
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_credit_wallets")
+}
+
+/// Every change to a balance, so credits can always be traced: a grant, or a charge for a feature.
+model AiCreditEntry {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  delta        Int
+  reason       String   @db.VarChar(32)
+  feature      String?  @db.VarChar(32)
+  balanceAfter Int
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_credit_entries")
+}

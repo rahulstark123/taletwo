@@ -1,0 +1,132 @@
+/**
+ * In-app subscription plans: Free, Pro and Max. Client-safe data only.
+ *
+ * Prices are in paise (INR minor units) so billing never handles floats. These plans are shown for
+ * planning. Payments and limit enforcement come with the billing milestone, so nothing here is
+ * charged or blocked yet.
+ *
+ * Note: the public pricing pages still read src/config/pricing.ts (one "Premium" plan). Keep the two
+ * in step when public pricing changes.
+ */
+
+export type PlanId = "free" | "pro" | "max";
+
+export type BillingCycle = "month" | "year";
+
+export interface AppPlan {
+  id: PlanId;
+  name: string;
+  tagline: string;
+  /** Monthly price in paise. 0 for Free. */
+  monthlyMinor: number;
+  /** Yearly price in paise, paid once a year. 0 for Free. */
+  yearlyMinor: number;
+  highlight?: string;
+}
+
+/** Price in paise for the chosen billing cycle. */
+export function priceFor(plan: AppPlan, cycle: BillingCycle): number {
+  return cycle === "year" ? plan.yearlyMinor : plan.monthlyMinor;
+}
+
+/** Whole-number percentage saved by paying yearly instead of twelve monthly payments. */
+export function yearlySavingPercent(plan: AppPlan): number {
+  if (!plan.monthlyMinor || !plan.yearlyMinor) return 0;
+  return Math.round((1 - plan.yearlyMinor / (plan.monthlyMinor * 12)) * 100);
+}
+
+export const APP_PLANS: AppPlan[] = [
+  {
+    id: "free",
+    name: "Free",
+    tagline: "Everything you need to start your shared space.",
+    monthlyMinor: 0,
+    yearlyMinor: 0,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    tagline: "Room for the whole story, with the full connection features.",
+    monthlyMinor: 9900,
+    yearlyMinor: 99900,
+    highlight: "Most popular",
+  },
+  {
+    id: "max",
+    name: "Max",
+    tagline: "No limits, early access and priority help for couples who use TaleTwo every day.",
+    monthlyMinor: 29900,
+    yearlyMinor: 299900,
+    highlight: "No limits",
+  },
+];
+
+/** A feature value: text for a limit, or a boolean for a yes/no feature. */
+export type FeatureValue = string | boolean;
+
+export interface FeatureRow {
+  label: string;
+  free: FeatureValue;
+  pro: FeatureValue;
+  max: FeatureValue;
+}
+
+export interface FeatureGroup {
+  title: string;
+  rows: FeatureRow[];
+}
+
+export const PLAN_FEATURES: FeatureGroup[] = [
+  {
+    title: "Your space",
+    rows: [
+      { label: "Couple space for two people", free: true, pro: true, max: true },
+      { label: "Shared notes", free: "20", pro: "Unlimited", max: "Unlimited" },
+      { label: "Bucket list items", free: "15", pro: "Unlimited", max: "Unlimited" },
+      { label: "Active plans", free: "5", pro: "Unlimited", max: "Unlimited" },
+      { label: "Special days", free: "5", pro: "100", max: "Unlimited" },
+      { label: "Custom calendar events", free: "20", pro: "Unlimited", max: "Unlimited" },
+    ],
+  },
+  {
+    title: "Memories",
+    rows: [
+      { label: "Photos stored", free: "30", pro: "2,000", max: "Unlimited (fair use)" },
+      { label: "Export all memories", free: false, pro: true, max: true },
+    ],
+  },
+  {
+    title: "Connection",
+    rows: [
+      { label: "Daily question", free: true, pro: true, max: true },
+      { label: "Question history", free: "Last 7 days", pro: "Full history", max: "Full history" },
+      { label: "Reveal modes for answers", free: "When both answer", pro: "All modes", max: "All modes" },
+      { label: "Couple games", free: "2 games", pro: "All 21 games", max: "All 21 games" },
+    ],
+  },
+  {
+    title: "Love letters",
+    rows: [
+      { label: "Letters per month", free: "2", pro: "Unlimited", max: "Unlimited" },
+      { label: "Scheduled “Open when” letters", free: false, pro: true, max: true },
+    ],
+  },
+  {
+    title: "Astro AI (preview)",
+    rows: [
+      { label: "AI credits each month", free: "20 once, at signup", pro: "100", max: "250" },
+      { label: "Numerology", free: true, pro: true, max: true },
+      { label: "Chat questions", free: "3 a day", pro: "30 a day", max: "Unlimited (fair use)" },
+      { label: "Partnership and finance topics", free: false, pro: true, max: true },
+      { label: "Detailed partnership report", free: false, pro: false, max: true },
+    ],
+  },
+  {
+    title: "Reminders and help",
+    rows: [
+      { label: "Reminders for special days", free: "On the day", pro: "Day before and week before", max: "All reminders" },
+      { label: "Early access to new features", free: false, pro: false, max: true },
+      { label: "Support response", free: "Standard", pro: "Priority", max: "Priority" },
+    ],
+  },
+];
