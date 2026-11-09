@@ -3,7 +3,7 @@ import { Check, Crown } from "lucide-react";
 import { LandingSection, SectionIntro } from "@/components/landing/sections";
 import { APP_PLANS, yearlySavingPercent, type AppPlan, type PlanId } from "@/config/subscriptions";
 import { PLAN_AI_CREDITS_PER_MONTH, SIGNUP_AI_CREDITS } from "@/config/ai-credits";
-import { formatPrice } from "@/lib/format";
+import { formatMoney } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 /** What each plan adds, in short lines. Prices come from src/config/subscriptions.ts. */
@@ -33,8 +33,8 @@ const POINTS: Record<PlanId, string[]> = {
 function priceText(plan: AppPlan) {
   if (plan.monthlyMinor === 0) return { main: "Free", sub: "forever" };
   return {
-    main: formatPrice({ interval: "month", amountMinor: plan.monthlyMinor, currency: "INR" }),
-    sub: `or ${formatPrice({ interval: "year", amountMinor: plan.yearlyMinor, currency: "INR" })} a year`,
+    main: formatMoney(plan.monthlyMinor / 100, "INR"),
+    sub: `or ${formatMoney(plan.yearlyMinor / 100, "INR")} a year in India · ${formatMoney(plan.usdMonthlyMinor / 100, "USD")} a month outside India`,
   };
 }
 

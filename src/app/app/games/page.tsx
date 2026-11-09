@@ -6,6 +6,9 @@ import { ArrowRight, Clock, Users } from "lucide-react";
 import { GAME_REGION_LABEL, GAMES, type GameRegion } from "@/components/games/game-registry";
 import { GamesPager } from "@/components/games/games-pager";
 import { cn } from "@/lib/utils";
+import { FREE_GAME_SLUGS, PLAN_LIMITS } from "@/config/plan-limits";
+import { requireVerifiedUser } from "@/server/authorization/session";
+import { planForUser } from "@/server/services/plan-limits";
 
 export const metadata: Metadata = {
   title: "Games",
@@ -25,6 +28,9 @@ export default function GamesPage({ searchParams }: { searchParams: Promise<{ st
 
 async function GamesContent({ searchParams }: { searchParams: Promise<{ style?: string; page?: string }> }) {
   await connection();
+  const user = await requireVerifiedUser();
+  const plan = await planForUser(user.id);
+  const lockedSlugs = new Set(PLAN_LIMITS[plan].games === Infinity ? [] : GAMES.filter((g) => !(FREE_GAME_SLUGS as readonly string[]).includes(g.slug)).map((g) => g.slug));
   const sp = await searchParams;
   const style = (STYLES as string[]).includes(sp.style ?? "") ? (sp.style as GameRegion) : "all";
   const list = style === "all" ? GAMES : GAMES.filter((g) => (g.region ?? "classic") === style);
@@ -84,6 +90,7 @@ async function GamesContent({ searchParams }: { searchParams: Promise<{ style?: 
                   <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" aria-hidden="true" />{g.players}</span>
                   <span className="inline-flex items-center gap-1.5"><Clock className="size-3.5" aria-hidden="true" />{g.time}</span>
                   <span className="rounded-full bg-ld-surface-container px-2.5 py-0.5 text-[11px] font-medium">{GAME_REGION_LABEL[g.region ?? "classic"]}</span>
+                  {lockedSlugs.has(g.slug) && <span className="rounded-full bg-ld-primary px-2.5 py-0.5 text-[11px] font-semibold text-ld-on-primary">Pro</span>}
                 </div>
               </div>
             </Link>

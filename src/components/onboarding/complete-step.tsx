@@ -9,10 +9,8 @@ import { AuthNotice } from "@/components/auth/auth-notice";
 import { apiCall } from "@/components/onboarding/api-client";
 
 export function CompleteStep({
-  workspaceId,
   members,
 }: {
-  workspaceId: number;
   members: { userId: string; displayName: string; initial: string }[];
 }) {
   const router = useRouter();
@@ -46,8 +44,7 @@ export function CompleteStep({
           Your little world is ready.
         </h2>
         <p className="text-ld-body-md text-ld-on-surface-variant">
-          Workspace <span className="font-semibold text-ld-on-surface">#{workspaceId}</span>
-          {members.length < 2 ? ". Your partner can join any time with the invite code." : "."}
+          {members.length < 2 ? "Your partner can join any time with your space code." : "Both of you are connected."}
         </p>
         <Heart className="mx-auto size-5 fill-ld-primary text-ld-primary" aria-hidden="true" />
       </div>

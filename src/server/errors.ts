@@ -28,6 +28,7 @@ export type AppErrorCode =
   | "INVITE_OWN"
   | "ONBOARDING_INCOMPLETE"
   | "INSUFFICIENT_CREDITS"
+  | "PLAN_LIMIT"
   | "NOT_FOUND"
   | "RATE_LIMITED"
   | "INTERNAL";

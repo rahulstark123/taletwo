@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import {
   MEMORY_UNDO_WINDOW_MS,
   type MemoriesPayload,
@@ -152,6 +153,7 @@ function assertPathsOwned(media: UploadedMedia[], workspaceId: number, memoryId:
 
 export async function createMemory(userId: string, input: CreateMemoryInput): Promise<MemoryDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "photos", (await prisma.memoryMedia.count({ where: { memory: { workspaceId: workspace.id, deletedAt: null } } })) + input.media.length);
   assertPathsOwned(input.media, workspace.id, input.id);
 
   const row = (await prisma.memory.create({
@@ -184,6 +186,7 @@ export async function createMemory(userId: string, input: CreateMemoryInput): Pr
 
 export async function updateMemory(userId: string, id: string, input: UpdateMemoryInput): Promise<MemoryDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "photos", (await prisma.memoryMedia.count({ where: { memory: { workspaceId: workspace.id, deletedAt: null } } })) + (input.addMedia?.length ?? 0));
   const existing = await prisma.memory.findFirst({
     where: { id, workspaceId: workspace.id, deletedAt: null },
     include: { media: true },

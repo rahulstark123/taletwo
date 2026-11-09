@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { APP_PLANS, priceFor, type BillingCycle, type PlanId } from "@/config/subscriptions";
+import { APP_PLANS, priceCurrencyFor, priceFor, type BillingCycle, type PlanId } from "@/config/subscriptions";
 import { AppError } from "@/server/errors";
 import { recordAuditEvent } from "@/server/services/audit";
 import { refreshPlanAllowance } from "@/server/services/ai-credits";
@@ -21,6 +21,9 @@ export interface CheckoutOrder {
 }
 
 const FREE: CurrentPlan = { plan: "free", cycle: null, currentPeriodEnd: null };
+
+/** Higher number is the bigger plan. A space never moves to a smaller plan before its paid period ends. */
+const PLAN_RANK: Record<PlanId, number> = { free: 0, pro: 1, max: 2 };
 
 /** The database stores billing cycles in capitals. The app uses lowercase. Convert at this boundary only. */
 type DbCycle = "MONTH" | "YEAR";
@@ -56,10 +59,23 @@ export async function createCheckout(userId: string, planId: PlanId, cycle: Bill
   const plan = APP_PLANS.find((p) => p.id === planId);
   if (!plan || plan.monthlyMinor === 0) throw new AppError("VALIDATION_FAILED", "Please choose a paid plan.", 400);
 
-  const amountMinor = priceFor(plan, cycle);
+  const active = await getActivePlan(workspace.id);
+  if (PLAN_RANK[active.plan] > PLAN_RANK[planId] && active.currentPeriodEnd) {
+    const activeName = APP_PLANS.find((p) => p.id === active.plan)?.name ?? "current";
+    const until = new Date(active.currentPeriodEnd).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    throw new AppError(
+      "VALIDATION_FAILED",
+      `Your ${activeName} plan is active until ${until}. You can switch to ${plan.name} after it ends.`,
+      409
+    );
+  }
+
+  // Rupees for Indian couples, US dollars everywhere else. The charge is made in the same currency.
+  const currency = priceCurrencyFor(workspace.currency);
+  const amountMinor = priceFor(plan, cycle, currency);
   const order = await createRazorpayOrder({
     amountMinor,
-    currency: "INR",
+    currency,
     receipt: `tt_${randomUUID().slice(0, 12)}`,
     notes: { workspaceId: String(workspace.id), plan: planId, cycle },
   });
@@ -71,12 +87,12 @@ export async function createCheckout(userId: string, planId: PlanId, cycle: Bill
       plan: planId,
       cycle: toDbCycle(cycle),
       amountMinor,
-      currency: "INR",
+      currency,
       razorpayOrderId: order.id,
     },
   });
 
-  return { orderId: order.id, keyId: razorpayKeyId(), amountMinor, currency: "INR", plan: planId, cycle };
+  return { orderId: order.id, keyId: razorpayKeyId(), amountMinor, currency, plan: planId, cycle };
 }
 
 /**
@@ -99,11 +115,15 @@ async function activatePayment(paymentRowId: string, razorpayPaymentId: string):
     // Buying again while a period is still running adds time on the end of it.
     const start = existing && existing.currentPeriodEnd.getTime() > now.getTime() ? existing.currentPeriodEnd : now;
     const end = addPeriod(start, payment.cycle);
+    // A payment started before a bigger plan was bought must not pull the space back to the smaller plan.
+    const keepHigherPlan = !!existing && existing.currentPeriodEnd.getTime() > now.getTime() && PLAN_RANK[existing.plan as PlanId] > PLAN_RANK[payment.plan as PlanId];
+    const plan = keepHigherPlan && existing ? existing.plan : payment.plan;
+    const cycle = keepHigherPlan && existing ? existing.cycle : payment.cycle;
 
     await tx.subscription.upsert({
       where: { workspaceId: payment.workspaceId },
-      create: { workspaceId: payment.workspaceId, plan: payment.plan, cycle: payment.cycle, currentPeriodStart: start, currentPeriodEnd: end },
-      update: { plan: payment.plan, cycle: payment.cycle, currentPeriodStart: start, currentPeriodEnd: end },
+      create: { workspaceId: payment.workspaceId, plan, cycle, currentPeriodStart: start, currentPeriodEnd: end },
+      update: { plan, cycle, currentPeriodStart: start, currentPeriodEnd: end },
     });
   });
 

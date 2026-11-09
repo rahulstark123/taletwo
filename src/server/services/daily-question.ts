@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { limitsForWorkspace } from "@/server/services/plan-limits";
 import { QUESTION_BANK, questionIndexFor, workspaceToday, type QuestionCategoryValue } from "@/lib/daily-questions";
 import type { DailyHistoryPayload, DailyQuestionView, RevealModeValue } from "@/lib/daily-question-types";
 import { AppError } from "@/server/errors";
@@ -8,7 +9,6 @@ import { getActiveWorkspaceForUser } from "@/server/services/workspaces";
 
 export type { DailyQuestionView, DailyHistoryPayload };
 
-const HISTORY_DAYS = 60;
 
 async function requireWorkspace(userId: string) {
   const summary = await getActiveWorkspaceForUser(userId);
@@ -121,6 +121,10 @@ export async function toggleHeart(userId: string): Promise<DailyQuestionView> {
 
 export async function setRevealMode(userId: string, mode: RevealModeValue): Promise<void> {
   const { workspace } = await requireWorkspace(userId);
+  const { limits } = await limitsForWorkspace(workspace.id);
+  if (!limits.allRevealModes && mode !== "WHEN_BOTH_ANSWER") {
+    throw new AppError("PLAN_LIMIT", "Choosing when answers appear is a Pro feature. Upgrade to Pro to pick another reveal rule.", 403);
+  }
   await prisma.workspace.update({ where: { id: workspace.id }, data: { questionReveal: mode } });
   await recordAuditEvent("daily_question.settings_changed", userId, { workspaceId: workspace.id });
 }
@@ -133,7 +137,11 @@ export async function getHistory(userId: string, category?: QuestionCategoryValu
   const { summary, workspace } = await requireWorkspace(userId);
   const today = workspaceToday(workspace.timezone);
   const partner = partnerOf(summary.members, userId);
-  const from = new Date(Date.parse(`${today}T00:00:00Z`) - HISTORY_DAYS * 86_400_000);
+  // How far back the history reaches depends on the plan: 7 days on Free, the full history on Pro and Max.
+  const { limits } = await limitsForWorkspace(workspace.id);
+  const from = Number.isFinite(limits.historyDays)
+    ? new Date(Date.parse(`${today}T00:00:00Z`) - limits.historyDays * 86_400_000)
+    : new Date(0);
 
   const rows = await prisma.dailyAnswer.findMany({
     where: { workspaceId: workspace.id, day: { gte: from, lt: new Date(`${today}T00:00:00Z`) } },

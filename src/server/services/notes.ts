@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import { AppError } from "@/server/errors";
 import { recordAuditEvent } from "@/server/services/audit";
 import { getActiveWorkspaceForUser } from "@/server/services/workspaces";
@@ -67,6 +68,7 @@ export async function listNotes(userId: string): Promise<NotesPayload> {
 
 export async function createNote(userId: string, input: CreateNoteInput): Promise<NoteDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "notes", await prisma.note.count({ where: { workspaceId: workspace.id, deletedAt: null } }));
   const title = input.title || input.body.trim().split("\n")[0]?.slice(0, 120) || "Untitled note";
 
   const row = await prisma.note.create({

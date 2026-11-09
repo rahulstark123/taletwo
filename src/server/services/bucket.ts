@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import { BUCKET_UNDO_WINDOW_MS, type BucketItemDTO, type BucketPayload } from "@/lib/bucket-types";
 import type { BucketFilter, CompleteBucketInput, CreateBucketInput, UpdateBucketInput } from "@/lib/validations/bucket";
 import { AppError } from "@/server/errors";
@@ -74,6 +75,7 @@ export async function listBucketItems(userId: string, filter: BucketFilter = {})
 
 export async function createBucketItem(userId: string, input: CreateBucketInput): Promise<BucketItemDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "bucketItems", await prisma.bucketItem.count({ where: { workspaceId: workspace.id, deletedAt: null } }));
   const row = await prisma.bucketItem.create({
     data: {
       workspaceId: workspace.id,

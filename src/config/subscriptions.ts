@@ -1,7 +1,8 @@
 /**
  * In-app subscription plans: Free, Pro and Max. Client-safe data only.
  *
- * Prices are in paise (INR minor units) so billing never handles floats. These plans are shown for
+ * Prices are in minor units (paise for INR, cents for USD) so billing never handles floats. India pays in
+ * rupees; everywhere else pays in US dollars. These plans are shown for
  * planning. Payments and limit enforcement come with the billing milestone, so nothing here is
  * charged or blocked yet.
  *
@@ -21,11 +22,22 @@ export interface AppPlan {
   monthlyMinor: number;
   /** Yearly price in paise, paid once a year. 0 for Free. */
   yearlyMinor: number;
+  /** US dollar prices in cents, used outside India. */
+  usdMonthlyMinor: number;
+  usdYearlyMinor: number;
   highlight?: string;
 }
 
-/** Price in paise for the chosen billing cycle. */
-export function priceFor(plan: AppPlan, cycle: BillingCycle): number {
+/** The currency a plan is paid in: rupees in India, US dollars elsewhere. */
+export type PriceCurrency = "INR" | "USD";
+
+export function priceCurrencyFor(workspaceCurrency: string | null | undefined): PriceCurrency {
+  return workspaceCurrency === "INR" ? "INR" : "USD";
+}
+
+/** Price in minor units for the cycle and currency. */
+export function priceFor(plan: AppPlan, cycle: BillingCycle, currency: PriceCurrency = "INR"): number {
+  if (currency === "USD") return cycle === "year" ? plan.usdYearlyMinor : plan.usdMonthlyMinor;
   return cycle === "year" ? plan.yearlyMinor : plan.monthlyMinor;
 }
 
@@ -42,6 +54,8 @@ export const APP_PLANS: AppPlan[] = [
     tagline: "Everything you need to start your shared space.",
     monthlyMinor: 0,
     yearlyMinor: 0,
+    usdMonthlyMinor: 0,
+    usdYearlyMinor: 0,
   },
   {
     id: "pro",
@@ -49,6 +63,8 @@ export const APP_PLANS: AppPlan[] = [
     tagline: "Room for the whole story, with the full connection features.",
     monthlyMinor: 9900,
     yearlyMinor: 99900,
+    usdMonthlyMinor: 200,
+    usdYearlyMinor: 2000,
     highlight: "Most popular",
   },
   {
@@ -57,6 +73,8 @@ export const APP_PLANS: AppPlan[] = [
     tagline: "No limits, early access and priority help for couples who use TaleTwo every day.",
     monthlyMinor: 29900,
     yearlyMinor: 299900,
+    usdMonthlyMinor: 500,
+    usdYearlyMinor: 5000,
     highlight: "No limits",
   },
 ];
@@ -126,7 +144,6 @@ export const PLAN_FEATURES: FeatureGroup[] = [
     rows: [
       { label: "Reminders for special days", free: "On the day", pro: "Day before and week before", max: "All reminders" },
       { label: "Early access to new features", free: false, pro: false, max: true },
-      { label: "Support response", free: "Standard", pro: "Priority", max: "Priority" },
     ],
   },
 ];

@@ -4,6 +4,7 @@ import { getAppUrl } from "@/config/site";
 import { AppError } from "@/server/errors";
 import { recordAuditEvent } from "@/server/services/audit";
 import { currencyForCountry, DEFAULT_COUNTRY, CURRENCIES, COUNTRIES } from "@/lib/locale";
+import { activeWorkspaceIdFor, handOverSpaceCode } from "@/server/services/space-code";
 import {
   generateInviteCode,
   hashInviteCode,
@@ -82,6 +83,8 @@ export async function createWorkspace(userId: string): Promise<WorkspaceSummary>
   });
 
   await recordAuditEvent("workspace.created", userId);
+  const mine = await activeWorkspaceIdFor(userId);
+  if (mine !== null) await handOverSpaceCode(userId, mine);
   const created = await getActiveWorkspaceForUser(userId);
   if (!created) throw new AppError("INTERNAL", "Something went wrong creating your workspace. Please try again.", 500);
   return created;
@@ -174,6 +177,8 @@ export async function acceptInvitation(userId: string, rawCode: string): Promise
     });
   });
 
+  const joinedId = await activeWorkspaceIdFor(userId);
+  if (joinedId !== null) await handOverSpaceCode(userId, joinedId);
   await recordAuditEvent("invitation.accepted", userId);
   const joined = await getActiveWorkspaceForUser(userId);
   if (!joined) throw new AppError("INTERNAL", "Something went wrong joining the workspace. Please try again.", 500);
@@ -211,8 +216,8 @@ export async function updateWorkspaceSettings(userId: string, input: WorkspaceSe
 }
 
 /**
- * Joins the space of the person who owns the code. If that person has no space yet, one is created
- * for them so both can connect. The owner's row is locked, so two people cannot take the last seat.
+ * Joins a couple space with its shared space code. A code a person was showing before they had a space
+ * still works: that joins their space, or creates one for them if they have none yet.
  */
 export async function acceptSpaceCode(userId: string, rawCode: string): Promise<WorkspaceSummary> {
   const code = normalizeSpaceCode(rawCode);
@@ -229,44 +234,48 @@ export async function acceptSpaceCode(userId: string, rawCode: string): Promise<
   const existing = await getActiveWorkspaceForUser(userId);
   if (existing) throw new AppError("ALREADY_IN_WORKSPACE", "You already belong to a workspace.", 409);
 
-  const owner = await prisma.userProfile.findUnique({
-    where: { spaceCode: code },
-    select: { id: true, displayName: true, timezone: true, country: true, currency: true },
-  });
-  if (!owner) {
-    await recordAuditEvent("space.code_failed", userId);
-    throw new AppError("INVITE_INVALID", "That code is not valid. Please check it with your partner.", 400);
-  }
-  if (owner.id === userId) throw new AppError("INVITE_OWN", "That is your own code. Share it with your partner instead.", 400);
+  // 1. The couple's shared code.
+  let workspaceId: number | null = (await prisma.workspace.findUnique({ where: { spaceCode: code }, select: { id: true } }))?.id ?? null;
 
-  await prisma.$transaction(async (tx) => {
-    const ownerMembership = await tx.workspaceMember.findFirst({
-      where: { userId: owner.id, status: "ACTIVE" },
-      select: { workspaceId: true },
+  // 2. A personal code from before the person had a space.
+  if (workspaceId === null) {
+    const owner = await prisma.userProfile.findUnique({
+      where: { spaceCode: code },
+      select: { id: true, displayName: true, timezone: true, country: true, currency: true },
     });
-    let workspaceId: number;
-    if (ownerMembership) {
-      workspaceId = ownerMembership.workspaceId;
-    } else {
-      const created = await tx.workspace.create({
+    if (!owner) {
+      await recordAuditEvent("space.code_failed", userId);
+      throw new AppError("INVITE_INVALID", "That code is not valid. Please check it with your partner.", 400);
+    }
+    if (owner.id === userId) throw new AppError("INVITE_OWN", "That is your own code. Share it with your partner instead.", 400);
+
+    workspaceId = await activeWorkspaceIdFor(owner.id);
+    if (workspaceId === null) {
+      const country = owner.country ?? DEFAULT_COUNTRY;
+      const created = await prisma.workspace.create({
         data: {
           name: `${owner.displayName}'s space`.slice(0, 80),
           timezone: owner.timezone,
-          country: owner.country ?? DEFAULT_COUNTRY,
-          currency: owner.currency ?? currencyForCountry(owner.country ?? DEFAULT_COUNTRY),
+          country,
+          currency: owner.currency ?? currencyForCountry(country),
         },
       });
-      await tx.workspaceMember.create({ data: { workspaceId: created.id, userId: owner.id, status: "ACTIVE" } });
+      await prisma.workspaceMember.create({ data: { workspaceId: created.id, userId: owner.id, status: "ACTIVE" } });
+      await handOverSpaceCode(owner.id, created.id);
       workspaceId = created.id;
     }
+  }
 
-    await tx.$queryRaw`SELECT "id" FROM "workspaces" WHERE "id" = ${workspaceId} FOR UPDATE`;
-    const activeCount = await tx.workspaceMember.count({ where: { workspaceId, status: "ACTIVE" } });
+  const targetId = workspaceId;
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "workspaces" WHERE "id" = ${targetId} FOR UPDATE`;
+    const activeCount = await tx.workspaceMember.count({ where: { workspaceId: targetId, status: "ACTIVE" } });
     if (activeCount >= MAX_ACTIVE_MEMBERS) {
       throw new AppError("WORKSPACE_FULL", "This space already has two people in it.", 409);
     }
-    await tx.workspaceMember.create({ data: { workspaceId, userId, status: "ACTIVE" } });
+    await tx.workspaceMember.create({ data: { workspaceId: targetId, userId, status: "ACTIVE" } });
   });
+  await handOverSpaceCode(userId, targetId);
 
   await recordAuditEvent("space.joined", userId);
   const joined = await getActiveWorkspaceForUser(userId);

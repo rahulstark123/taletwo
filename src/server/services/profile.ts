@@ -21,6 +21,12 @@ export async function ensureUserProfile(user: User) {
   const displayName = (metaName || fallbackName(email)).slice(0, 60);
   const verifiedAt = user.email_confirmed_at ? new Date(user.email_confirmed_at) : null;
 
+  // Fast path: on almost every request the profile already matches. One read avoids a transaction.
+  const existing = await prisma.userProfile.findUnique({ where: { id: user.id }, select: { id: true, email: true, emailVerifiedAt: true } });
+  if (existing && existing.email === email && (!verifiedAt || existing.emailVerifiedAt)) {
+    return existing;
+  }
+
   const profile = await prisma.$transaction(async (tx) => {
     // Supabase guarantees each email belongs to one auth user. If a profile still holds this email
     // under a different id, its auth account was deleted and it is stale. Release the email so the

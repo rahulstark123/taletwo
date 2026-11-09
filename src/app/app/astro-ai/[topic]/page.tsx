@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { AlertTriangle, ArrowLeft, Clock } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { ASTRO_TOPICS, findTopic } from "@/components/astro/astro-topics";
 import { AstroChat } from "@/components/astro/astro-chat";
+import { AstroTopicRunner } from "@/components/astro/astro-topic-runner";
 import { CreditsChip } from "@/components/astro/credits-chip";
 import { NumerologyPanel } from "@/components/astro/numerology-panel";
 import { AI_FEATURE_COSTS, type AiFeature } from "@/config/ai-credits";
+import type { AstroTopicSlug } from "@/lib/validations/astro";
 import { requireVerifiedUser } from "@/server/authorization/session";
+import { planForUser } from "@/server/services/plan-limits";
+import { PLAN_LIMITS } from "@/config/plan-limits";
+import Link from "next/link";
 import { getBalance } from "@/server/services/ai-credits";
 
 export const metadata: Metadata = {
@@ -28,6 +32,8 @@ export default async function AstroTopicPage({ params }: { params: Promise<{ top
   await connection();
   const user = await requireVerifiedUser();
   const balance = await getBalance(user.id);
+  const plan = await planForUser(user.id);
+  const lockedTopic = !PLAN_LIMITS[plan].partnerTopics && (topic.slug === "partnership" || topic.slug === "finance");
   const cost = AI_FEATURE_COSTS[topic.slug as AiFeature];
 
   return (
@@ -60,28 +66,21 @@ export default async function AstroTopicPage({ params }: { params: Promise<{ top
       {topic.slug === "chat" && <AstroChat samples={topic.samples} />}
       {topic.slug === "numerology" && <NumerologyPanel />}
 
-      {topic.slug !== "chat" && topic.slug !== "numerology" && (
-        <section className="space-y-5 rounded-3xl bg-ld-surface-container-lowest p-6 shadow-sm sm:p-8">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-2xl bg-ld-surface-container text-ld-primary">
-              <Clock className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="font-display text-ld-title-lg text-ld-on-surface">Coming with Astro AI</h2>
-              <p className="text-ld-body-sm text-ld-on-surface-variant">This topic will open once Astro AI is connected. No readings are shown until then, and no credits are used.</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-ld-label-sm text-ld-on-surface-variant">Questions you can ask</p>
-            <ul className="space-y-2">
-              {topic.samples.map((s) => (
-                <li key={s} className="rounded-2xl bg-ld-surface px-4 py-3 text-ld-body-sm text-ld-on-surface-variant ring-1 ring-ld-outline-variant/40">
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </div>
+      {lockedTopic && (
+        <section className="space-y-4 rounded-3xl bg-ld-surface-container-lowest p-6 text-center shadow-sm sm:p-8">
+          <h2 className="font-display text-ld-title-lg text-ld-on-surface">{topic.title} is a Pro feature</h2>
+          <p className="text-ld-body-sm text-ld-on-surface-variant">Upgrade to Pro or Max to open partnership and finance topics in Astro AI.</p>
+          <Link href="/app/subscriptions" className="inline-flex h-11 items-center rounded-full bg-ld-primary px-6 text-ld-label-md text-ld-on-primary">See plans</Link>
         </section>
+      )}
+
+      {topic.slug !== "chat" && !lockedTopic && (
+        <AstroTopicRunner
+          topic={topic.slug as AstroTopicSlug}
+          title={topic.title}
+          cost={cost?.credits ?? 0}
+          samples={topic.samples}
+        />
       )}
 
       <p className="flex items-start gap-2 text-ld-caption text-ld-on-surface-variant">

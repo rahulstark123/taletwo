@@ -62,9 +62,14 @@ model UserProfile {
   plans           Plan[]          @relation("PlanCreator")
   bucketItems     BucketItem[]    @relation("BucketCreator")
   memories        Memory[]        @relation("MemoryCreator")
+  lettersSent     Letter[]        @relation("LetterSender")
+  lettersReceived Letter[]        @relation("LetterRecipient")
   specialDays     SpecialDay[]    @relation("SpecialDayCreator")
   calendarEvents  CalendarEvent[]  @relation("CalendarEventCreator")
   supportRequests SupportRequest[] @relation("SupportRequestAuthor")
+  supportReplies  SupportReply[]   @relation("SupportReplyAuthor")
+  /// Admin panel access. Set by hand in the database; never from the app.
+  isAdmin         Boolean          @default(false)
   payments        Payment[]        @relation("PaymentPayer")
   aiWallet        AiCreditWallet?
   aiCreditEntries AiCreditEntry[]
@@ -92,6 +97,8 @@ model Workspace {
   // Used to decide when the daily question changes and when "midnight" reveals happen.
   timezone      String     @default("UTC") @db.VarChar(64)
   /// ISO 3166 country code and ISO 4217 currency code. Budgets and money shown in the space use the currency.
+  /// The couple's shared space code. Both partners see the same code.
+  spaceCode     String?    @unique @db.VarChar(6)
   country       String     @default("IN") @db.Char(2)
   currency      String     @default("INR") @db.VarChar(3)
   questionReveal QuestionRevealMode @default(WHEN_BOTH_ANSWER)
@@ -105,6 +112,8 @@ model Workspace {
   plans       Plan[]
   bucketItems BucketItem[]
   memories    Memory[]
+  letters     Letter[]
+  astroReadings AstroReading[]
   specialDays SpecialDay[]
   calendarEvents CalendarEvent[]
   subscription   Subscription?
@@ -195,6 +204,53 @@ model Note {
   @@index([workspaceId, deletedAt, pinned, updatedAt])
   @@index([authorId])
   @@map("notes")
+}
+
+enum LetterPaper {
+  CREAM
+  ROSE
+  SAGE
+  LAVENDER
+
+  @@map("letter_paper")
+}
+
+enum LetterStatus {
+  /// Only the writer can see a draft.
+  DRAFT
+  /// Sent. If opensAt is in the future the letter stays sealed for the recipient until then.
+  SENT
+
+  @@map("letter_status")
+}
+
+/// A love letter from one partner to the other. Drafts stay private to the writer until sent.
+model Letter {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  senderId    String       @db.Uuid
+  recipientId String?      @db.Uuid
+  title       String       @default("") @db.VarChar(80)
+  body        String       @default("") @db.Text
+  occasion    String       @default("Just because") @db.VarChar(60)
+  paper       LetterPaper  @default(CREAM)
+  status      LetterStatus @default(DRAFT)
+  /// When a sealed letter opens. Null means it can be read as soon as it is sent.
+  opensAt     DateTime?    @db.Timestamptz(3)
+  sentAt      DateTime?    @db.Timestamptz(3)
+  readAt      DateTime?    @db.Timestamptz(3)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?    @db.Timestamptz(3)
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sender    UserProfile  @relation("LetterSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient UserProfile? @relation("LetterRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, sentAt])
+  @@index([workspaceId, recipientId, status])
+  @@index([senderId])
+  @@map("letters")
 }
 
 enum PlanKind {
@@ -500,10 +556,26 @@ model SupportRequest {
   createdAt DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt DateTime        @updatedAt @db.Timestamptz(3)
 
-  user UserProfile @relation("SupportRequestAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  user    UserProfile @relation("SupportRequestAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  replies SupportReply[]
 
   @@index([userId, createdAt])
   @@map("support_requests")
+}
+
+/// A reply on a support request, written by the team (author is an admin) and shown to the person who raised it.
+model SupportReply {
+  id        String   @id @default(uuid()) @db.Uuid
+  requestId String   @db.Uuid
+  authorId  String?  @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  request SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  UserProfile?   @relation("SupportReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+  @@map("support_replies")
 }
 
 enum BillingCycle {
@@ -583,4 +655,20 @@ model AiCreditEntry {
 
   @@index([userId, createdAt])
   @@map("ai_credit_entries")
+}
+
+/// One Astro AI reading that is kept for a day, so viewing it again the same day costs nothing.
+model AstroReading {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  topic       String   @db.VarChar(32)
+  /// Calendar day in the space's timezone, YYYY-MM-DD.
+  dayKey      String   @db.Char(10)
+  content     String   @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, topic, dayKey])
+  @@map("astro_readings")
 }

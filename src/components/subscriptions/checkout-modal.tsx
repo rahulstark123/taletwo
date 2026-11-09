@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, Lock, X } from "lucide-react";
 import { apiCall } from "@/components/onboarding/api-client";
-import { PLAN_FEATURES, priceFor, type AppPlan, type BillingCycle } from "@/config/subscriptions";
+import { PLAN_FEATURES, priceFor, type AppPlan, type BillingCycle, type PriceCurrency } from "@/config/subscriptions";
 import type { CurrentPlan } from "@/lib/billing-types";
-import { formatPrice } from "@/lib/format";
+import { formatMoney } from "@/lib/locale";
 import { loadRazorpay, openRazorpay, type RazorpaySuccess } from "@/lib/razorpay-client";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ interface CheckoutModalProps {
   userName: string;
   /** The account's own email, sent to Razorpay so the receipt reaches the right inbox. */
   userEmail: string;
+  currency: PriceCurrency;
   onClose: () => void;
   onPaid: (current: CurrentPlan) => void;
 }
@@ -46,11 +47,11 @@ function includedRows(plan: AppPlan) {
  * Step one of buying: a preview of exactly what is being bought. Step two (after Confirm) creates the
  * order on the server and opens Razorpay Checkout. Nothing is charged before the user confirms here.
  */
-export function CheckoutModal({ plan, cycle, userName, userEmail, onClose, onPaid }: CheckoutModalProps) {
+export function CheckoutModal({ plan, cycle, userName, userEmail, currency, onClose, onPaid }: CheckoutModalProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const amountMinor = priceFor(plan, cycle);
-  const price = formatPrice({ interval: cycle, amountMinor, currency: "INR" });
+  const amountMinor = priceFor(plan, cycle, currency);
+  const price = formatMoney(amountMinor / 100, currency);
   const rows = includedRows(plan);
 
   useEffect(() => {

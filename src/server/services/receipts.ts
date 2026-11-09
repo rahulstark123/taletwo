@@ -2,7 +2,6 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { APP_PLANS } from "@/config/subscriptions";
-import { formatPrice } from "@/lib/format";
 
 export type { ReceiptDTO } from "@/lib/billing-types";
 import type { ReceiptDTO } from "@/lib/billing-types";
@@ -72,7 +71,8 @@ export async function buildInvoicePdf(input: {
 
   const cycleWord = input.cycle === "MONTH" ? "Monthly (one month)" : "Yearly (one year)";
   // Every order is created in INR (see the billing service), so the price is always formatted as INR.
-  const amount = formatPrice({ interval: input.cycle === "MONTH" ? "month" : "year", amountMinor: input.amountMinor, currency: "INR" }, "en-IN");
+  // Plain text only: the PDF font has no rupee or other symbols, so the code is written out.
+  const amount = `${input.currency} ${(input.amountMinor / 100).toLocaleString("en-US")}`;
   let y = 690;
   drawRow(page, bold, "Billed to", input.payerName, y); y -= 20;
   drawRow(page, font, "Email", input.payerEmail, y); y -= 20;

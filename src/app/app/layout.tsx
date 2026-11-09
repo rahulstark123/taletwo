@@ -33,10 +33,13 @@ async function AppShell({ children }: { children: ReactNode }) {
 
   const displayName = me.displayName;
   const userInitial = displayName.charAt(0).toUpperCase();
-  const activePlan = me.workspace ? await getActivePlan(me.workspace.id) : null;
+  // These three read different tables, so they run together rather than one after another.
+  const [activePlan, creditBalance, spaceCode] = await Promise.all([
+    me.workspace ? getActivePlan(me.workspace.id) : Promise.resolve(null),
+    getBalance(user.id),
+    ensureSpaceCode(user.id),
+  ]);
   const planName = APP_PLANS.find((p) => p.id === (activePlan?.plan ?? "free"))?.name ?? "Free";
-  const creditBalance = await getBalance(user.id);
-  const spaceCode = await ensureSpaceCode(user.id);
 
   return (
     <ThemeRoot theme={me.theme}>

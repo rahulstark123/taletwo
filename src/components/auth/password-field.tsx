@@ -20,6 +20,7 @@ export function PasswordField({ id, className, ref, ...rest }: PasswordFieldProp
         ref={ref}
         id={id}
         type={visible ? "text" : "password"}
+        placeholder={rest.placeholder ?? "••••••••"}
         autoComplete={rest.autoComplete ?? "current-password"}
         className={cn(inputClass, "pr-12", className)}
       />

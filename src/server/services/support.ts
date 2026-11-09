@@ -10,6 +10,7 @@ export async function listMySupportRequests(userId: string): Promise<SupportRequ
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: 100,
+    include: { replies: { orderBy: { createdAt: "asc" }, select: { id: true, body: true, createdAt: true } } },
   });
   return rows.map((r) => ({
     id: r.id,
@@ -20,6 +21,7 @@ export async function listMySupportRequests(userId: string): Promise<SupportRequ
     subject: r.subject,
     message: r.message,
     createdAt: r.createdAt.toISOString(),
+    replies: r.replies.map((x) => ({ id: x.id, body: x.body, createdAt: x.createdAt.toISOString() })),
   }));
 }
 
@@ -45,5 +47,6 @@ export async function createSupportRequest(userId: string, input: CreateSupportI
     subject: row.subject,
     message: row.message,
     createdAt: row.createdAt.toISOString(),
+    replies: [],
   };
 }

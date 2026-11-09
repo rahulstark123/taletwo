@@ -231,6 +231,14 @@ export function SupportBoard({ initial }: { initial: SupportRequestDTO[] }) {
                 </div>
                 <h3 className="mt-2 text-ld-title-lg text-ld-on-surface">{r.subject}</h3>
                 <p className="mt-1 line-clamp-3 whitespace-pre-line text-ld-body-sm text-ld-on-surface-variant">{r.message}</p>
+                {r.replies.length > 0 && (
+                  <div className="mt-4 space-y-2 border-t border-ld-outline-variant/40 pt-4">
+                    <p className="text-ld-label-sm font-semibold text-ld-primary">From the TaleTwo team</p>
+                    {r.replies.map((x) => (
+                      <p key={x.id} className="whitespace-pre-wrap rounded-xl bg-ld-secondary-container/30 p-3 text-ld-body-sm text-ld-on-surface">{x.body}</p>
+                    ))}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

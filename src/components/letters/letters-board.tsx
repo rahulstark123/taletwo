@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Inbox, Lock, Mail, MailOpen, NotebookPen, Pencil, Plus, Send, Sparkles } from "lucide-react";
+import { apiCall } from "@/components/onboarding/api-client";
 import { LetterPaper, PAPER_STYLES, WaxSeal } from "@/components/letters/letter-paper";
 import { WriteLetterModal, type LetterDraftInput } from "@/components/letters/write-letter-modal";
 import { Pagination, usePagination } from "@/components/shared/pagination";
-import type { LetterFixture, LetterKind } from "@/fixtures/dev-letters";
+import type { LetterDTO, LetterKind, LettersPayload } from "@/lib/letters-types";
 import { cn } from "@/lib/utils";
 
 type Tab = LetterKind;
@@ -29,16 +30,24 @@ function countdown(opensAt: string, now: number) {
   return `Opens in ${days} days`;
 }
 
-function isSealed(letter: LetterFixture, now: number) {
+/** Still sealed for the current time. The server never sends a partner's sealed text, so this is only for display. */
+function isSealed(letter: LetterDTO, now: number) {
   return letter.opensAt !== null && new Date(letter.opensAt).getTime() > now;
 }
 
-export function LettersBoard({ initial, partnerName, currentName }: { initial: LetterFixture[]; partnerName: string; currentName: string }) {
-  const [letters, setLetters] = useState<LetterFixture[]>(initial);
+/** Hidden from the viewer: a partner's letter that has not opened yet. Your own scheduled letters stay readable to you. */
+function isHidden(letter: LetterDTO, now: number) {
+  return !letter.isMine && isSealed(letter, now);
+}
+
+export function LettersBoard({ initial }: { initial: LettersPayload }) {
+  const { partnerName, canSchedule, monthlyLimit } = initial;
+  const [letters, setLetters] = useState<LetterDTO[]>(initial.letters);
+  const [sentThisMonth, setSentThisMonth] = useState(initial.sentThisMonth);
   const [tab, setTab] = useState<Tab>("received");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
-  const [writing, setWriting] = useState<{ open: boolean; draft: LetterFixture | null }>({ open: false, draft: null });
+  const [writing, setWriting] = useState<{ open: boolean; draft: LetterDTO | null }>({ open: false, draft: null });
   const [notice, setNotice] = useState<string | null>(null);
   const [writeSeq, setWriteSeq] = useState(0);
   const [now, setNow] = useState(0);
@@ -60,41 +69,38 @@ export function LettersBoard({ initial, partnerName, currentName }: { initial: L
   const paged = usePagination(visible, tab);
   const selected = letters.find((l) => l.id === selectedId) ?? visible[0] ?? null;
   const unread = letters.filter((l) => l.kind === "received" && !l.read).length;
+  const lettersLeft = monthlyLimit === null ? null : Math.max(0, monthlyLimit - sentThisMonth);
 
-  function openWriter(draft: LetterFixture | null) {
+  function openWriter(draft: LetterDTO | null) {
     setWriteSeq((s) => s + 1);
     setWriting({ open: true, draft });
   }
 
-  function pick(letter: LetterFixture) {
+  function pick(letter: LetterDTO) {
     setSelectedId(letter.id);
     if (letter.kind === "received" && !letter.read && !isSealed(letter, now)) {
-      // Opening animation: the seal breaks, then the letter is marked as read.
+      // Opening animation: the seal breaks, then the server marks the letter as read and returns it.
       setOpening(letter.id);
-      setTimeout(() => {
-        setLetters((prev) => prev.map((l) => (l.id === letter.id ? { ...l, read: true } : l)));
+      setTimeout(async () => {
+        const res = await apiCall<{ letter: LetterDTO }>(`/api/letters/${letter.id}/read`, { method: "POST" });
+        if (res.ok) setLetters((prev) => prev.map((l) => (l.id === letter.id ? res.data.letter : l)));
         setOpening(null);
       }, 900);
     }
   }
 
-  function saveLetter(input: LetterDraftInput) {
-    const created: LetterFixture = {
-      id: `local-${Date.now()}`,
-      kind: input.delivery === "draft" ? "draft" : input.delivery === "schedule" ? "scheduled" : "sent",
-      title: input.title,
-      body: input.body,
-      from: currentName,
-      to: partnerName,
-      paper: input.paper,
-      occasion: input.occasion,
-      createdAt: new Date().toISOString(),
-      opensAt: input.delivery === "schedule" && input.opensAt ? input.opensAt : null,
-      read: true,
-    };
-    setLetters((prev) => [created, ...prev]);
-    setTab(created.kind);
-    setSelectedId(created.id);
+  async function saveLetter(input: LetterDraftInput): Promise<string | null> {
+    const editingId = writing.draft?.id ?? null;
+    const res = editingId
+      ? await apiCall<{ letter: LetterDTO }>(`/api/letters/${editingId}`, { method: "PATCH", body: input })
+      : await apiCall<{ letter: LetterDTO }>("/api/letters", { method: "POST", body: input });
+    if (!res.ok) return res.error.message;
+
+    const saved = res.data.letter;
+    setLetters((prev) => [saved, ...prev.filter((l) => l.id !== saved.id)]);
+    if (!editingId && input.delivery !== "draft") setSentThisMonth((n) => n + 1);
+    setTab(saved.kind);
+    setSelectedId(saved.id);
     setWriting({ open: false, draft: null });
     setNotice(
       input.delivery === "draft"
@@ -104,14 +110,22 @@ export function LettersBoard({ initial, partnerName, currentName }: { initial: L
           : "Letter sent with love."
     );
     setTimeout(() => setNotice(null), 4000);
+    return null;
   }
 
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <p className="max-w-xl text-ld-body-md text-ld-on-surface-variant">
-          Write it now, or seal it for later. Some letters wait for the right moment.
-        </p>
+        <div className="max-w-xl space-y-1">
+          <p className="text-ld-body-md text-ld-on-surface-variant">
+            Write it now, or seal it for later. Some letters wait for the right moment.
+          </p>
+          {lettersLeft !== null && (
+            <p className="text-ld-caption text-ld-on-surface-variant">
+              {lettersLeft} of {monthlyLimit} letters left this month on your plan.
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => openWriter(null)}
@@ -167,55 +181,59 @@ export function LettersBoard({ initial, partnerName, currentName }: { initial: L
             <EmptyFolder tab={tab} onWrite={() => openWriter(null)} />
           ) : (
             <>
-            <ul className="flex flex-col gap-2" aria-label={TABS.find((t) => t.key === tab)?.label}>
-              {paged.pageItems.map((letter) => {
-                const sealed = isSealed(letter, now);
-                const active = selected?.id === letter.id;
-                const unreadItem = letter.kind === "received" && !letter.read;
-                return (
-                  <li key={letter.id}>
-                    <button
-                      type="button"
-                      onClick={() => pick(letter)}
-                      aria-current={active ? "true" : undefined}
-                      className={cn(
-                        "group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all",
-                        active ? "bg-ld-secondary-container/50 shadow-sm" : "hover:bg-ld-surface-container-low"
-                      )}
-                    >
-                      <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", PAPER_STYLES[letter.paper].sheet, "ring-1 ring-ld-on-surface/10")}>
-                        {sealed ? (
-                          <Lock className="size-4 text-ld-on-surface-variant" aria-hidden="true" />
-                        ) : unreadItem ? (
-                          <Mail className="size-4 text-ld-primary" aria-hidden="true" />
-                        ) : (
-                          <MailOpen className="size-4 text-ld-on-surface-variant" aria-hidden="true" />
+              <ul className="flex flex-col gap-2" aria-label={TABS.find((t) => t.key === tab)?.label}>
+                {paged.pageItems.map((letter) => {
+                  const hidden = isHidden(letter, now);
+                  const active = selected?.id === letter.id;
+                  const unreadItem = letter.kind === "received" && !letter.read;
+                  return (
+                    <li key={letter.id}>
+                      <button
+                        type="button"
+                        onClick={() => pick(letter)}
+                        aria-current={active ? "true" : undefined}
+                        className={cn(
+                          "group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all",
+                          active ? "bg-ld-secondary-container/50 shadow-sm" : "hover:bg-ld-surface-container-low"
                         )}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={cn("block truncate text-ld-body-sm text-ld-on-surface", unreadItem ? "font-semibold" : "font-medium")}>
-                          {sealed ? "A sealed letter" : letter.title || "Untitled letter"}
+                      >
+                        <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", PAPER_STYLES[letter.paper].sheet, "ring-1 ring-ld-on-surface/10")}>
+                          {hidden ? (
+                            <Lock className="size-4 text-ld-on-surface-variant" aria-hidden="true" />
+                          ) : unreadItem ? (
+                            <Mail className="size-4 text-ld-primary" aria-hidden="true" />
+                          ) : (
+                            <MailOpen className="size-4 text-ld-on-surface-variant" aria-hidden="true" />
+                          )}
                         </span>
-                        <span className="block truncate text-ld-caption text-ld-on-surface-variant">
-                          {letter.kind === "received" ? `From ${letter.from}` : `To ${letter.to}`}
-                          {letter.opensAt ? ` · ${sealed ? countdown(letter.opensAt, now) : "Ready to open"}` : ` · ${shortFmt.format(new Date(letter.createdAt))}`}
+                        <span className="min-w-0 flex-1">
+                          <span className={cn("block truncate text-ld-body-sm text-ld-on-surface", unreadItem ? "font-semibold" : "font-medium")}>
+                            {hidden ? "A sealed letter" : letter.title || "Untitled letter"}
+                          </span>
+                          <span className="block truncate text-ld-caption text-ld-on-surface-variant">
+                            {letter.kind === "received" ? `From ${letter.from}` : letter.kind === "draft" ? "Draft" : `To ${letter.to}`}
+                            {letter.kind === "draft"
+                              ? ` · ${shortFmt.format(new Date(letter.createdAt))}`
+                              : letter.opensAt
+                                ? ` · ${isSealed(letter, now) ? countdown(letter.opensAt, now) : "Ready to open"}`
+                                : ` · ${shortFmt.format(new Date(letter.createdAt))}`}
+                          </span>
                         </span>
-                      </span>
-                      {unreadItem && <span className="size-2 shrink-0 rounded-full bg-ld-primary" aria-label="Unread" />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <Pagination
-              page={paged.page}
-              totalPages={paged.totalPages}
-              total={paged.total}
-              pageSize={paged.pageSize}
-              start={paged.start}
-              setPage={paged.setPage}
-              label="Letters pages"
-            />
+                        {unreadItem && <span className="size-2 shrink-0 rounded-full bg-ld-primary" aria-label="Unread" />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Pagination
+                page={paged.page}
+                totalPages={paged.totalPages}
+                total={paged.total}
+                pageSize={paged.pageSize}
+                start={paged.start}
+                setPage={paged.setPage}
+                label="Letters pages"
+              />
             </>
           )}
         </section>
@@ -254,6 +272,7 @@ export function LettersBoard({ initial, partnerName, currentName }: { initial: L
         initial={writing.draft}
         open={writing.open}
         partnerName={partnerName}
+        canSchedule={canSchedule}
         onClose={() => setWriting({ open: false, draft: null })}
         onSave={saveLetter}
       />
@@ -261,11 +280,11 @@ export function LettersBoard({ initial, partnerName, currentName }: { initial: L
   );
 }
 
-function Reader({ letter, now, opening, onEdit }: { letter: LetterFixture; now: number; opening: boolean; onEdit: () => void }) {
-  const sealed = isSealed(letter, now);
-  const dateLabel = dateFmt.format(new Date(letter.opensAt && sealed ? letter.opensAt : letter.createdAt));
+function Reader({ letter, now, opening, onEdit }: { letter: LetterDTO; now: number; opening: boolean; onEdit: () => void }) {
+  const hidden = isHidden(letter, now);
+  const editable = letter.kind === "draft" || letter.kind === "scheduled";
 
-  if (sealed) {
+  if (hidden) {
     return (
       <div className="flex flex-col items-center gap-6 py-10 text-center">
         <div className="paper-ink relative w-full max-w-md rounded-[10px] bg-[#f6e9dd] p-8 shadow-[0_20px_50px_-24px_rgba(64,56,50,0.5)]">
@@ -273,13 +292,9 @@ function Reader({ letter, now, opening, onEdit }: { letter: LetterFixture; now: 
           <div className="relative flex flex-col items-center gap-4 pt-6">
             <WaxSeal paper={letter.paper} locked />
             <p className="font-display text-ld-headline-md text-ld-on-surface">{letter.occasion}</p>
-            <p className="text-ld-body-sm text-ld-on-surface-variant">
-              From {letter.from}, sealed until
-            </p>
+            <p className="text-ld-body-sm text-ld-on-surface-variant">From {letter.from}, sealed until</p>
             <p className="font-display text-ld-title-lg text-ld-primary">{dateFmt.format(new Date(letter.opensAt!))}</p>
-            <p className="rounded-full bg-ld-surface px-4 py-1.5 text-ld-caption text-ld-on-surface-variant">
-              {countdown(letter.opensAt!, now)}
-            </p>
+            <p className="rounded-full bg-ld-surface px-4 py-1.5 text-ld-caption text-ld-on-surface-variant">{countdown(letter.opensAt!, now)}</p>
           </div>
         </div>
         <p className="max-w-sm text-ld-caption text-ld-on-surface-variant">
@@ -289,20 +304,28 @@ function Reader({ letter, now, opening, onEdit }: { letter: LetterFixture; now: 
     );
   }
 
+  const dateLabel = dateFmt.format(new Date(letter.createdAt));
+  const caption =
+    letter.kind === "received"
+      ? `From ${letter.from}`
+      : letter.kind === "draft"
+        ? "Draft · only you can see this"
+        : letter.kind === "scheduled"
+          ? `Scheduled for ${dateFmt.format(new Date(letter.opensAt!))} · to ${letter.to}`
+          : `To ${letter.to}`;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-ld-caption text-ld-on-surface-variant">
-          {letter.kind === "received" ? `From ${letter.from}` : letter.kind === "draft" ? "Draft · only you can see this" : `To ${letter.to}`}
-        </p>
-        {(letter.kind === "draft" || letter.kind === "scheduled" || letter.kind === "sent") && (
+        <p className="text-ld-caption text-ld-on-surface-variant">{caption}</p>
+        {editable && (
           <button
             type="button"
             onClick={onEdit}
             className="inline-flex h-9 items-center gap-2 rounded-full bg-ld-surface-container-lowest px-4 text-ld-label-sm text-ld-on-surface shadow-sm hover:bg-ld-surface-container-high"
           >
             <Pencil className="size-3.5" aria-hidden="true" />
-            {letter.kind === "draft" ? "Continue writing" : "Open in editor"}
+            {letter.kind === "draft" ? "Continue writing" : "Edit letter"}
           </button>
         )}
       </div>

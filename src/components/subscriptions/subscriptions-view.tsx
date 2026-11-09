@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, CircleDashed, Crown, Info, Minus } from "lucide-react";
 import {
   APP_PLANS,
   PLAN_FEATURES,
   priceFor,
   yearlySavingPercent,
+  type PriceCurrency,
   type AppPlan,
   type BillingCycle,
   type FeatureValue,
   type PlanId,
 } from "@/config/subscriptions";
-import { formatPrice } from "@/lib/format";
+import { formatMoney } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import type { CurrentPlan } from "@/lib/billing-types";
 import { CheckoutModal } from "@/components/subscriptions/checkout-modal";
@@ -21,14 +23,14 @@ import { Receipt } from "lucide-react";
 
 const RANK: Record<PlanId, number> = { free: 0, pro: 1, max: 2 };
 
-function priceLabel(plan: AppPlan, cycle: BillingCycle) {
+function priceLabel(plan: AppPlan, cycle: BillingCycle, currency: PriceCurrency) {
   if (plan.monthlyMinor === 0) return "Free";
-  return formatPrice({ interval: cycle, amountMinor: priceFor(plan, cycle), currency: "INR" });
+  return formatMoney(priceFor(plan, cycle, currency) / 100, currency);
 }
 
 /** Yearly plans show what the year works out to per month, so the two options compare easily. */
-function monthlyEquivalent(plan: AppPlan) {
-  return formatPrice({ interval: "month", amountMinor: Math.round(plan.yearlyMinor / 12), currency: "INR" });
+function monthlyEquivalent(plan: AppPlan, currency: PriceCurrency) {
+  return formatMoney(Math.round(priceFor(plan, "year", currency) / 12) / 100, currency);
 }
 
 function untilLabel(iso: string) {
@@ -57,12 +59,15 @@ interface SubscriptionsViewProps {
   currentPlan: CurrentPlan;
   userName: string;
   userEmail: string;
+  /** Rupees for Indian couples, US dollars elsewhere. */
+  billingCurrency?: PriceCurrency;
 }
 
 /** Plans, prices, a feature comparison, and the buy flow for Pro and Max. */
-export function SubscriptionsView({ currentPlan, userName, userEmail }: SubscriptionsViewProps) {
+export function SubscriptionsView({ currentPlan, userName, userEmail, billingCurrency = "INR" }: SubscriptionsViewProps) {
   const [cycle, setCycle] = useState<BillingCycle>("month");
   const [current, setCurrent] = useState<CurrentPlan>(currentPlan);
+  const router = useRouter();
   const [buying, setBuying] = useState<AppPlan | null>(null);
   const [showReceipts, setShowReceipts] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -149,11 +154,11 @@ export function SubscriptionsView({ currentPlan, userName, userEmail }: Subscrip
               </div>
               <p className="mt-2 min-h-[48px] text-ld-body-sm text-ld-on-surface-variant">{plan.tagline}</p>
               <div className="my-5 flex items-baseline gap-1.5">
-                <span className="font-display text-[40px] font-bold text-ld-on-surface">{priceLabel(plan, cycle)}</span>
+                <span className="font-display text-[40px] font-bold text-ld-on-surface">{priceLabel(plan, cycle, billingCurrency)}</span>
                 {isPaid && <span className="text-ld-body-sm text-ld-on-surface-variant">{cycle === "month" ? "/ month" : "/ year"}</span>}
               </div>
               {isPaid && cycle === "year" && (
-                <p className="-mt-3 mb-4 text-ld-caption text-ld-on-surface-variant">About {monthlyEquivalent(plan)} a month, paid once a year</p>
+                <p className="-mt-3 mb-4 text-ld-caption text-ld-on-surface-variant">About {monthlyEquivalent(plan, billingCurrency)} a month, paid once a year</p>
               )}
 
               <div className="mt-auto space-y-2">
@@ -236,10 +241,13 @@ export function SubscriptionsView({ currentPlan, userName, userEmail }: Subscrip
           cycle={cycle}
           userName={userName}
           userEmail={userEmail}
+          currency={billingCurrency}
           onClose={() => setBuying(null)}
           onPaid={(next) => {
             setCurrent(next);
             setBuying(null);
+            // Re-run the server components so the top bar plan, plan limits and AI credits show the new plan.
+            router.refresh();
             setNotice(`Thank you. ${APP_PLANS.find((p) => p.id === next.plan)?.name ?? "Your"} is active until ${next.currentPeriodEnd ? untilLabel(next.currentPeriodEnd) : "the end of your period"}.`);
           }}
         />

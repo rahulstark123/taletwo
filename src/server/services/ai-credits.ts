@@ -9,6 +9,9 @@ import { AppError } from "@/server/errors";
  * left alone, so no one gets the grant twice.
  */
 export async function ensureWallet(userId: string): Promise<void> {
+  // Fast path: the wallet almost always exists, so one read is enough.
+  const existing = await prisma.aiCreditWallet.findUnique({ where: { userId }, select: { userId: true } });
+  if (existing) return;
   await prisma.$transaction(async (tx) => {
     const existing = await tx.aiCreditWallet.findUnique({ where: { userId }, select: { userId: true } });
     if (existing) return;
@@ -106,6 +109,29 @@ export async function spendCredits(userId: string, feature: AiFeature): Promise<
     });
     return wallet.balance;
   });
+}
+
+/** Gives credits back when a charged feature fails before it produced a reply. */
+export async function refundCredits(userId: string, feature: AiFeature, amount: number): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const wallet = await tx.aiCreditWallet.update({
+      where: { userId },
+      data: { balance: { increment: amount } },
+      select: { balance: true },
+    });
+    await tx.aiCreditEntry.create({
+      data: { userId, delta: amount, reason: "REFUND", feature, balanceAfter: wallet.balance },
+    });
+  });
+}
+
+/** Chat sessions started today (UTC) that were charged and not refunded. */
+export async function chatSessionsToday(userId: string, since: Date): Promise<number> {
+  const [charged, refunded] = await Promise.all([
+    prisma.aiCreditEntry.count({ where: { userId, reason: "FEATURE_CHARGE", feature: "chat", createdAt: { gte: since } } }),
+    prisma.aiCreditEntry.count({ where: { userId, reason: "REFUND", feature: "chat", createdAt: { gte: since } } }),
+  ]);
+  return Math.max(0, charged - refunded);
 }
 
 /** What each feature costs, for display. */

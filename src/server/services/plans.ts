@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import { PLAN_UNDO_WINDOW_MS, type ChecklistItem, type PlanDTO, type PlansPayload } from "@/lib/plans-types";
 import type { CreatePlanInput, PlanFilter, UpdatePlanInput } from "@/lib/validations/plans";
 import { AppError } from "@/server/errors";
@@ -85,6 +86,7 @@ export async function listPlans(userId: string, filter: PlanFilter = {}): Promis
 
 export async function createPlan(userId: string, input: CreatePlanInput): Promise<PlanDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "activePlans", await prisma.plan.count({ where: { workspaceId: workspace.id, deletedAt: null, status: { not: "DONE" } } }));
   const row = await prisma.plan.create({
     data: {
       workspaceId: workspace.id,

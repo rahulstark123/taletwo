@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import { SPECIAL_DAY_UNDO_WINDOW_MS, type SpecialDayDTO, type SpecialDaysPayload } from "@/lib/special-days-types";
 import type { CreateSpecialDayInput, UpdateSpecialDayInput } from "@/lib/validations/special-days";
 import { AppError } from "@/server/errors";
@@ -70,6 +71,7 @@ export async function listSpecialDays(userId: string): Promise<SpecialDaysPayloa
 
 export async function createSpecialDay(userId: string, input: CreateSpecialDayInput): Promise<SpecialDayDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "specialDays", await prisma.specialDay.count({ where: { workspaceId: workspace.id, deletedAt: null } }));
   const row = (await prisma.specialDay.create({
     data: {
       workspaceId: workspace.id,

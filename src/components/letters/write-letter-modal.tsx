@@ -4,11 +4,15 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, Heart, Send, X } from "lucide-react";
 import { LetterPaper, PAPER_STYLES } from "@/components/letters/letter-paper";
 import { SelectChevron } from "@/components/auth/form-field";
-import { LETTER_OCCASIONS, LETTER_TEMPLATES, type LetterFixture, type PaperStyle } from "@/fixtures/dev-letters";
+import {
+  LETTER_BODY_MAX,
+  LETTER_OCCASIONS,
+  LETTER_TEMPLATES,
+  LETTER_TITLE_MAX,
+  type LetterDTO,
+  type LetterPaperStyle as PaperStyle,
+} from "@/lib/letters-types";
 import { cn } from "@/lib/utils";
-
-export const LETTER_TITLE_MAX = 80;
-export const LETTER_BODY_MAX = 2000;
 
 export type Delivery = "now" | "schedule" | "draft";
 
@@ -25,9 +29,12 @@ export interface LetterDraftInput {
 interface WriteLetterModalProps {
   open: boolean;
   partnerName: string;
-  initial?: LetterFixture | null;
+  initial?: LetterDTO | null;
+  /** Free plans can write and send letters but not schedule them. */
+  canSchedule?: boolean;
   onClose: () => void;
-  onSave: (input: LetterDraftInput) => void;
+  /** Resolves with an error message to show, or null when the letter was saved. */
+  onSave: (input: LetterDraftInput) => Promise<string | null>;
 }
 
 /** Local date-time string for <input type="datetime-local"> in the user's timezone. */
@@ -65,7 +72,7 @@ const DELIVERY: { key: Delivery; label: string; hint: string; icon: typeof Send 
  * Write a letter. Options: templates, occasion, paper, delivery (now, scheduled or draft), and a live
  * preview of the sheet as it will look. Esc closes, Ctrl/Cmd+Enter saves, unsaved work asks first.
  */
-export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }: WriteLetterModalProps) {
+export function WriteLetterModal({ open, partnerName, initial, canSchedule = true, onClose, onSave }: WriteLetterModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstRef = useRef<HTMLInputElement>(null);
@@ -77,6 +84,7 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
   const [delivery, setDelivery] = useState<Delivery>(start.delivery);
   const [when, setWhen] = useState(start.when);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   // Captured when the modal mounts (the parent remounts it for every opening), so renders stay pure.
@@ -106,11 +114,13 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
     onClose();
   }
 
-  function submit() {
+  async function submit() {
+    if (saving) return;
     if (bodyMissing) return setError("Write a few words before sending. Drafts can stay empty.");
     if (scheduleInvalid) return setError("Pick a time at least five minutes from now.");
     setError(null);
-    onSave({
+    setSaving(true);
+    const message = await onSave({
       title: title.trim(),
       body: body.trim(),
       occasion,
@@ -118,6 +128,8 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
       delivery,
       opensAt: delivery === "schedule" && whenDate ? whenDate.toISOString() : null,
     });
+    setSaving(false);
+    if (message) setError(message);
   }
 
   useEffect(() => {
@@ -146,7 +158,7 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, title, body, occasion, paper, delivery, when, confirmDiscard]);
+  }, [open, title, body, occasion, paper, delivery, when, confirmDiscard, saving]);
 
   if (!open) return null;
 
@@ -229,7 +241,7 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
                     onClick={() => setPaper(p)}
                     className={cn("relative size-10 rounded-full ring-1 ring-ld-on-surface/15 transition-transform hover:scale-110", PAPER_STYLES[p].swatch, paper === p && "ring-2 ring-ld-primary")}
                   >
-                    {paper === p && <Check className="absolute inset-0 m-auto size-4 text-ld-on-surface" aria-hidden="true" />}
+                    {paper === p && <Check className="absolute inset-0 m-auto size-4 text-[#3a2a2e]" aria-hidden="true" />}
                   </button>
                 ))}
               </div>
@@ -279,7 +291,9 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
                       type="button"
                       role="radio"
                       aria-checked={active}
+                      disabled={d.key === "schedule" && !canSchedule}
                       onClick={() => {
+                        if (d.key === "schedule" && !canSchedule) return;
                         setDelivery(d.key);
                         if (d.key === "schedule" && !when) setWhen(toLocalInput(quickDates()[0].at));
                       }}
@@ -289,8 +303,13 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
                       )}
                     >
                       <d.icon className={cn("size-4", active ? "text-ld-primary" : "text-ld-on-surface-variant")} aria-hidden="true" />
-                      <span className="text-ld-label-sm font-semibold text-ld-on-surface">{d.label}</span>
-                      <span className="text-[11px] leading-tight text-ld-on-surface-variant">{d.hint}</span>
+                      <span className="text-ld-label-sm font-semibold text-ld-on-surface">
+                        {d.label}
+                        {d.key === "schedule" && !canSchedule && <span className="ml-1 text-ld-primary">· Pro</span>}
+                      </span>
+                      <span className="text-[11px] leading-tight text-ld-on-surface-variant">
+                        {d.key === "schedule" && !canSchedule ? "Available on Pro and Max" : d.hint}
+                      </span>
                     </button>
                   );
                 })}
@@ -359,10 +378,10 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
           <button
             type="button"
             onClick={submit}
-            disabled={bodyMissing || scheduleInvalid}
+            disabled={bodyMissing || scheduleInvalid || saving}
             className="ml-auto inline-flex h-11 items-center gap-2 rounded-full bg-ld-primary px-6 text-ld-label-md text-ld-on-primary shadow-[0_8px_20px_rgba(201,126,139,0.28)] transition-colors hover:bg-ld-on-primary-fixed-variant disabled:opacity-50"
           >
-            {saveLabel}
+            {saving ? "Saving…" : saveLabel}
           </button>
         </footer>
       </div>
@@ -370,7 +389,7 @@ export function WriteLetterModal({ open, partnerName, initial, onClose, onSave }
   );
 }
 
-function initialState(initial?: LetterFixture | null) {
+function initialState(initial?: LetterDTO | null) {
   if (!initial) {
     return { title: "", body: "", occasion: LETTER_OCCASIONS[0] as string, paper: "CREAM" as PaperStyle, delivery: "now" as Delivery, when: "" };
   }

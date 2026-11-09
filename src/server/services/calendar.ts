@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { assertWithinLimit } from "@/server/services/plan-limits";
 import { calendarDateIn } from "@/lib/dates";
 import type { CalendarEventDTO, CalendarItem, CalendarPayload } from "@/lib/calendar-types";
 import type { CreateCalendarEventInput, UpdateCalendarEventInput } from "@/lib/validations/calendar";
@@ -169,6 +170,7 @@ const INCLUDE = { createdBy: { select: { displayName: true } } } as const;
 
 export async function createCalendarEvent(userId: string, input: CreateCalendarEventInput): Promise<CalendarEventDTO> {
   const workspace = await requireWorkspace(userId);
+  await assertWithinLimit(workspace.id, "calendarEvents", await prisma.calendarEvent.count({ where: { workspaceId: workspace.id, deletedAt: null } }));
   const startsAt = input.allDay ? new Date(`${input.startsAt.slice(0, 10)}T00:00:00Z`) : new Date(input.startsAt);
   const row = await prisma.calendarEvent.create({
     data: {

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { SubscriptionsView } from "@/components/subscriptions/subscriptions-view";
+import { priceCurrencyFor } from "@/config/subscriptions";
 import type { CurrentPlan } from "@/lib/billing-types";
 import { getCurrentUser } from "@/server/authorization/session";
 import { getActivePlan } from "@/server/services/billing";
@@ -33,5 +34,5 @@ async function SubscriptionsContent() {
     ? await getActivePlan(workspace.id)
     : { plan: "free", cycle: null, currentPeriodEnd: null };
 
-  return <SubscriptionsView currentPlan={currentPlan} userName={me.displayName} userEmail={me.email} />;
+  return <SubscriptionsView currentPlan={currentPlan} userName={me.displayName} userEmail={me.email} billingCurrency={priceCurrencyFor(me.workspace?.currency)} />;
 }

@@ -70,7 +70,10 @@ export function ConnectStep({
     });
     setBusy(null);
     if (!result.ok) return setMessage({ tone: "error", text: result.error.message });
-    router.push("/onboarding/complete");
+    // Joining is the whole setup, so finish onboarding here and go straight to the app.
+    const done = await apiCall("/api/onboarding/complete", { method: "POST" });
+    if (!done.ok) return setMessage({ tone: "error", text: done.error.message });
+    router.push("/app");
   }
 
   async function copy(text: string, what: "code" | "link") {
@@ -134,8 +137,7 @@ export function ConnectStep({
         ) : (
           <div className="space-y-4">
             <p className="text-ld-body-sm text-ld-on-surface">
-              Your workspace is <span className="font-semibold">#{workspace.id}</span>.
-              {workspace.isFull ? " Both of you are connected." : " Waiting for your partner to join."}
+              {workspace.isFull ? "Both of you are connected." : "Waiting for your partner to join."}
             </p>
 
             {!workspace.isFull && !invite && (

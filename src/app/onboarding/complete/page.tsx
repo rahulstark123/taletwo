@@ -30,7 +30,6 @@ async function CompleteContent() {
       <div className="space-y-8">
         <StepIndicator current={3} />
         <CompleteStep
-          workspaceId={me.workspace.id}
           members={me.workspace.members}
         />
       </div>

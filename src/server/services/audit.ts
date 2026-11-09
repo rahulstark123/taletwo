@@ -32,7 +32,8 @@ export type AuditAction =
   | "billing.payment_completed"
   | "space.joined"
   | "space.code_failed"
-  | "space.code_regenerated";
+  | "space.code_regenerated"
+  | "admin.credits_granted";
 
 export async function recordAuditEvent(action: AuditAction, userId?: string | null, metadata?: Record<string, string | number | boolean>) {
   try {

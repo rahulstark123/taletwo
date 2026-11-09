@@ -1,5 +1,5 @@
 import { Heart, LockKeyhole } from "lucide-react";
-import type { PaperStyle } from "@/fixtures/dev-letters";
+import type { LetterPaperStyle as PaperStyle } from "@/lib/letters-types";
 import { cn } from "@/lib/utils";
 
 /** Paper colour and tone for each style. Kept soft so text stays readable. */
@@ -9,28 +9,28 @@ export const PAPER_STYLES: Record<PaperStyle, { label: string; sheet: string; li
     sheet: "bg-[#fffaf3]",
     line: "rgba(201,126,139,0.14)",
     seal: "bg-ld-primary text-ld-on-primary",
-    swatch: "bg-[#fffaf3]",
+    swatch: "bg-[#f1dfc0]",
   },
   ROSE: {
     label: "Rose",
     sheet: "bg-[#fdeef0]",
     line: "rgba(140,75,87,0.12)",
     seal: "bg-ld-primary text-ld-on-primary",
-    swatch: "bg-[#fdeef0]",
+    swatch: "bg-[#efb4bf]",
   },
   SAGE: {
     label: "Sage",
     sheet: "bg-[#eef4ee]",
     line: "rgba(76,100,82,0.13)",
     seal: "bg-ld-tertiary text-ld-on-tertiary",
-    swatch: "bg-[#eef4ee]",
+    swatch: "bg-[#b3d9b8]",
   },
   LAVENDER: {
     label: "Lavender",
     sheet: "bg-[#f1ecf7]",
     line: "rgba(111,85,140,0.12)",
     seal: "bg-[#6f558c] text-white",
-    swatch: "bg-[#f1ecf7]",
+    swatch: "bg-[#c6b3e6]",
   },
 };
 

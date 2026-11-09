@@ -40,4 +40,6 @@ export interface SupportRequestDTO {
   subject: string;
   message: string;
   createdAt: string;
+  /** Replies from the TaleTwo team, oldest first. */
+  replies: { id: string; body: string; createdAt: string }[];
 }

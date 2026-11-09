@@ -23,20 +23,22 @@ export default async function AstroAiPage() {
     <div className="space-y-8">
       <section className="relative overflow-hidden rounded-3xl bg-ld-surface-container-lowest p-7 shadow-sm sm:p-10">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-ld-secondary-container/40 blur-3xl" />
-        <div className="relative space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-ld-tertiary-fixed/60 px-3 py-1 text-ld-caption font-medium text-ld-on-tertiary-fixed-variant">
-              <Sparkles className="size-3.5" aria-hidden="true" />
-              Astro AI is getting ready
-            </span>
-            <CreditsChip balance={balance} />
+        <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] md:items-center">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-ld-tertiary-fixed/60 px-3 py-1 text-ld-caption font-medium text-ld-on-tertiary-fixed-variant">
+                <Sparkles className="size-3.5" aria-hidden="true" />
+                Astro AI is getting ready
+              </span>
+              <CreditsChip balance={balance} />
+            </div>
+            <h1 className="font-display text-ld-headline-lg-mobile text-ld-on-surface md:text-ld-headline-lg">Ask the stars, together.</h1>
+            <p className="max-w-2xl text-ld-body-md text-ld-on-surface-variant">
+              Reflective guidance from Indian (Vedic) astrology and Western numerology, for love, money, career and everyday decisions. Each use costs AI credits. New accounts start with {SIGNUP_AI_CREDITS}.
+            </p>
           </div>
-          <h1 className="font-display text-ld-headline-lg-mobile text-ld-on-surface md:text-ld-headline-lg">Ask the stars, together.</h1>
-          <p className="max-w-2xl text-ld-body-md text-ld-on-surface-variant">
-            Reflective guidance from Indian (Vedic) astrology and Western numerology, for love, money, career and everyday decisions. Each use costs AI credits. New accounts start with {SIGNUP_AI_CREDITS}.
-          </p>
-          <p className="flex max-w-2xl items-start gap-2 rounded-2xl bg-ld-surface-container p-4 text-ld-body-sm text-ld-on-surface">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-ld-primary" aria-hidden="true" />
+          <p className="flex items-start gap-3 rounded-2xl bg-ld-primary/10 p-5 text-ld-body-sm text-ld-on-surface ring-1 ring-ld-primary/20">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-ld-primary" aria-hidden="true" />
             <span>
               <strong className="font-semibold">Be cautious.</strong> Astro AI is an AI tool. Its replies can be wrong, incomplete or out of date. Do not rely on them for medical, legal, financial or safety decisions, and check important choices with a qualified professional.
             </span>

@@ -6,7 +6,7 @@ import { apiCall } from "@/components/onboarding/api-client";
 import { Pagination, usePagination } from "@/components/shared/pagination";
 import { APP_PLANS } from "@/config/subscriptions";
 import type { ReceiptDTO } from "@/lib/billing-types";
-import { formatPrice } from "@/lib/format";
+import { formatMoney } from "@/lib/locale";
 
 const CYCLE_WORD = { month: "Monthly", year: "Yearly" } as const;
 
@@ -79,7 +79,7 @@ export function ReceiptsModal({ onClose }: { onClose: () => void }) {
             <ul className="space-y-3">
               {paged.pageItems.map((r) => {
                 const planName = APP_PLANS.find((p) => p.id === r.plan)?.name ?? r.plan;
-                const amount = formatPrice({ interval: r.cycle, amountMinor: r.amountMinor, currency: "INR" }, "en-IN");
+                const amount = formatMoney(r.amountMinor / 100, r.currency);
                 return (
                   <li key={r.id} className="flex flex-col gap-3 rounded-2xl bg-ld-surface-container p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-0.5">
