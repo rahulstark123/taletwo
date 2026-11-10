@@ -8,7 +8,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 /** Models this app needs. A cached client missing any of them is stale (from before a schema change). */
-const REQUIRED_DELEGATES = ["userProfile", "workspace", "workspaceMember", "invitation", "note", "plan", "bucketItem", "letter", "astroReading", "aiCreditEntry"] as const;
+const REQUIRED_DELEGATES = ["userProfile", "workspace", "workspaceMember", "invitation", "note", "plan", "bucketItem", "letter", "astroReading", "aiCreditEntry", "confession"] as const;
 
 function isCurrent(client: PrismaClient) {
   return REQUIRED_DELEGATES.every((name) => (client as unknown as Record<string, unknown>)[name] !== undefined);

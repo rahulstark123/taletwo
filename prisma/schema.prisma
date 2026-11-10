@@ -64,6 +64,7 @@ model UserProfile {
   memories        Memory[]        @relation("MemoryCreator")
   lettersSent     Letter[]        @relation("LetterSender")
   lettersReceived Letter[]        @relation("LetterRecipient")
+  confessionsWritten Confession[] @relation("ConfessionAuthor")
   specialDays     SpecialDay[]    @relation("SpecialDayCreator")
   calendarEvents  CalendarEvent[]  @relation("CalendarEventCreator")
   supportRequests SupportRequest[] @relation("SupportRequestAuthor")
@@ -114,6 +115,7 @@ model Workspace {
   memories    Memory[]
   letters     Letter[]
   astroReadings AstroReading[]
+  confessions   Confession[]
   specialDays SpecialDay[]
   calendarEvents CalendarEvent[]
   subscription   Subscription?
@@ -671,4 +673,32 @@ model AstroReading {
 
   @@unique([workspaceId, topic, dayKey])
   @@map("astro_readings")
+}
+
+/// A private confession from one partner. The text and audio are encrypted in the browser with a key made
+/// from the confession's lock password. The server stores only ciphertext and cannot read it.
+model Confession {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId Int
+  authorId    String    @db.Uuid
+  /// False: only the author can see it. True: the partner can see it too (still needs the lock password).
+  shared      Boolean   @default(false)
+  /// Random salt used with the lock password to derive the encryption key (base64).
+  salt        String    @db.VarChar(64)
+  /// AES-GCM ciphertext of the title and text (base64, IV first).
+  sealed      String    @db.Text
+  /// Short card title shown in the list without unlocking. Not encrypted, so keep it non-sensitive.
+  label       String?   @db.VarChar(80)
+  /// Encrypted audio object in private storage. Null when there is no recording.
+  audioPath   String?   @db.VarChar(512)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    UserProfile @relation("ConfessionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt, createdAt])
+  @@index([authorId])
+  @@map("confessions")
 }

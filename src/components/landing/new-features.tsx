@@ -6,6 +6,7 @@ import {
   Gamepad2,
   Gem,
   KeyRound,
+  Lock,
   LifeBuoy,
   ListChecks,
   Mail,
@@ -30,6 +31,7 @@ const MODULES: { icon: LucideIcon; title: string; body: string; tag?: string }[]
   { icon: Gem, title: "Special Days", body: "Anniversaries and birthdays with countdowns and reminders, so nothing important slips by." },
   { icon: MessageCircleHeart, title: "Daily Questions", body: "One gentle question each day. You each answer privately, and it opens up when you are both ready." },
   { icon: CalendarDays, title: "Calendar", body: "Date nights, plans, special days and dreams on one calendar, in month, week or agenda view." },
+  { icon: Lock, title: "Confession Room", body: "Write or record the things you want to say, and lock each one with a password. Keep it private, or share it for your partner to open." },
   { icon: Gamepad2, title: "Couple Games", body: "Twenty-one games to play together, from Truth or Dare to Caption Contest, for any mood." },
   { icon: Stars, title: "Astro AI", body: "Vedic and numerology guidance on love, money, career and more. Currently in preview.", tag: "Preview" },
   { icon: LifeBuoy, title: "Support", body: "Raise a ticket when something is wrong, or suggest an improvement. We read every one." },
@@ -41,7 +43,7 @@ export function ModulesGrid() {
       <div className="flex flex-col gap-12">
         <SectionIntro
           eyebrow="Everything in one space"
-          title="Eleven little rooms for the two of you."
+          title="Twelve little rooms for the two of you."
           body="Each part of TaleTwo does one job well, and they all share the same private space."
         />
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

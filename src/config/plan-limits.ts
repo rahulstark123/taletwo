@@ -28,6 +28,8 @@ export interface PlanLimits {
   scheduledLetters: boolean;
   /** Astro AI chat sessions a person can start each day. */
   astroChatSessionsPerDay: number;
+  /** Confessions each person can save each calendar month (UTC). */
+  confessionsPerMonth: number;
 }
 
 export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
@@ -45,6 +47,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     lettersPerMonth: 2,
     scheduledLetters: false,
     astroChatSessionsPerDay: 3,
+    confessionsPerMonth: 2,
   },
   pro: {
     notes: UNLIMITED,
@@ -60,6 +63,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     lettersPerMonth: UNLIMITED,
     scheduledLetters: true,
     astroChatSessionsPerDay: 30,
+    confessionsPerMonth: 10,
   },
   max: {
     notes: UNLIMITED,
@@ -75,6 +79,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     lettersPerMonth: UNLIMITED,
     scheduledLetters: true,
     astroChatSessionsPerDay: UNLIMITED,
+    confessionsPerMonth: UNLIMITED,
   },
 };
 

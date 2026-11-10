@@ -103,6 +103,7 @@ export const PLAN_FEATURES: FeatureGroup[] = [
       { label: "Active plans", free: "5", pro: "Unlimited", max: "Unlimited" },
       { label: "Special days", free: "5", pro: "100", max: "Unlimited" },
       { label: "Custom calendar events", free: "20", pro: "Unlimited", max: "Unlimited" },
+      { label: "Confessions a month each", free: "2", pro: "10", max: "Unlimited" },
     ],
   },
   {

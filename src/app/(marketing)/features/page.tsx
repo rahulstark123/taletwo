@@ -9,6 +9,7 @@ import {
   Gamepad2,
   Gem,
   ListChecks,
+  Lock,
   Mail,
   MessageCircleHeart,
   Moon,
@@ -176,6 +177,20 @@ const FEATURES: Feature[] = [
             </span>
           ))}
         </div>
+      </Tile>
+    ),
+  },
+  {
+    id: "confession-room",
+    icon: Lock,
+    title: "Confession Room",
+    body: "A private place for the things you want to say. Write a confession or record a voice note, then lock it with a password. Keep it to yourself or share it with your partner, who can open it only with the password.",
+    bullets: ["Written words and voice notes", "Private or shared with your partner", "Locked with a password only you choose", "Sealed on your device, so we cannot read it"],
+    preview: (
+      <Tile>
+        <p className="text-eyebrow">Locked confession</p>
+        <p className="mt-2 font-display text-lg text-foreground">Enter the lock password to open</p>
+        <p className="mt-3 text-xs text-muted-foreground">Shared with your partner · includes a voice note</p>
       </Tile>
     ),
   },
